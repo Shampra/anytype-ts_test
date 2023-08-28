@@ -421,6 +421,7 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 				});
 				break;
 
+				
 			case 'turnObject':
 				menuId = 'typeSuggest';
 				menuParam.data = Object.assign(menuParam.data, {
