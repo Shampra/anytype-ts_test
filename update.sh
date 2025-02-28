@@ -62,7 +62,7 @@ printf "Done\n"
 
 if [ "$platform" = "windows-latest" ]; then
   echo -n "Uncompressing... "
-  unzip $FILE
+  tar -xzf $FILE
   printf "Done\n"
   
   echo "Moving... "
