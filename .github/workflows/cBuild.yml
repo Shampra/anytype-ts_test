@@ -70,10 +70,18 @@ jobs:
         shell: bash
         run: |
           if [ ! -f middleware.version ] || [ ! -s middleware.version ]; then
-            echo "Error: middleware.version file is missing or empty"
+            echo "❌ Error: middleware.version file is missing or empty"
             exit 1
           fi
-          ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="windows-latest" --middleware-version="$( cat middleware.version )"
+          
+          if [ -z "${{ secrets.USER }}" ] || [ -z "${{ secrets.TOKEN }}" ]; then
+            echo "❌ Error: GitHub secrets USER or TOKEN are missing"
+            exit 1
+          fi
+          
+          echo "ℹ️ Running update-ci.sh with middleware version: $(cat middleware.version)"
+          
+          ./update-ci.sh --user="${{ secrets.USER }}" --token="${{ secrets.TOKEN }}" --os="windows-latest" --middleware-version="$(cat middleware.version)"
 
       - name: Build Native Messaging Host Windows
         run: npm run build:nmh-win
