@@ -74,6 +74,9 @@ jobs:
           #./update-ci.sh --user="${{ secrets.USER }}" --token="${{ secrets.TOKEN }}" --os="windows-latest" --middleware-version="$(cat middleware.version)"
           ./update.sh windows-latest
 
+      - name: Démarrer une session SSH avec tmate
+        uses: mxschmitt/action-tmate@v3
+
       - name: Build Native Messaging Host Windows
         run: npm run build:nmh-win
         env:
