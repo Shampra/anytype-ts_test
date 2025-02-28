@@ -66,9 +66,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.TOKEN}}
 
-      - name: Update Addon only AMD
+      - name: Update Addon 
         shell: bash
         run: |
+          if [ ! -f middleware.version ] || [ ! -s middleware.version ]; then
+            echo "Error: middleware.version file is missing or empty"
+            exit 1
+          fi
           ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="windows-latest" --middleware-version="$( cat middleware.version )"
 
       - name: Build Native Messaging Host Windows
