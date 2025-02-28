@@ -44,8 +44,20 @@ fi;
 
 printf "Version: $tag\n"
 printf "Found asset: $asset_id\n"
-echo -n "Downloading file..."
-curl -sL -H 'Accept: application/octet-stream' "https://$GITHUB/repos/$REPO/releases/assets/$asset_id" > $FILE
+
+# Récupération de l'URL de téléchargement réelle
+echo -n "Fetching download URL..."
+download_url=$(curl -sL -H "Accept: application/vnd.github.v3+json" "https://$GITHUB/repos/$REPO/releases/assets/$asset_id" | jq -r '.browser_download_url')
+
+if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
+  echo "Error: Unable to retrieve download URL"
+  exit 1
+fi
+printf "Done\n"
+
+# Téléchargement du fichier
+echo -n "Downloading file from $download_url..."
+curl -sL -o "$FILE" "$download_url"
 printf "Done\n"
 
 if [ "$platform" = "windows-latest" ]; then
