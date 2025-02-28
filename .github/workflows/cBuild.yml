@@ -16,6 +16,11 @@ on:
         required: false
         type: boolean
         default: true
+      debugssh:
+        description: 'Accès SSH?'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: 'write'
@@ -77,14 +82,7 @@ jobs:
           # Affiche le contenu du répertoire courant
           Write-Host "📂 Contenu du répertoire courant :"
           Get-ChildItem -Path . -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
-          
-          # Liste récursivement les fichiers dans chaque dossier existant
-          $dirs = Get-ChildItem -Directory -ErrorAction SilentlyContinue
-          foreach ($dir in $dirs) {
-              Write-Host "`n📁 Contenu de $($dir.FullName) :"
-              Get-ChildItem -Path $dir.FullName -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
-          }
-          
+  
           # Vérifie spécifiquement si les dossiers dist et artifacts existent avant d'y accéder
           $folders = @("dist", "artifacts")
           foreach ($folder in $folders) {
@@ -101,9 +99,6 @@ jobs:
                   Write-Host "`n⚠️ Le dossier $folder n'existe pas."
               }
           }
-
-      - name: Démarrer une session SSH avec tmate
-        uses: mxschmitt/action-tmate@v3
 
       - name: Build Native Messaging Host Windows
         run: npm run build:nmh-win
@@ -127,6 +122,8 @@ jobs:
           AZURE_CERT_NAME: ${{ secrets.AZURE_CERT_NAME }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+          ELECTRON_SKIP_NOTARIZE: 1
+          ELECTRON_SKIP_SENTRY: 1
           
       - name: Make artifacts dir
         run: |
@@ -153,14 +150,7 @@ jobs:
           # Affiche le contenu du répertoire courant
           Write-Host "📂 Contenu du répertoire courant :"
           Get-ChildItem -Path . -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
-          
-          # Liste récursivement les fichiers dans chaque dossier existant
-          $dirs = Get-ChildItem -Directory -ErrorAction SilentlyContinue
-          foreach ($dir in $dirs) {
-              Write-Host "`n📁 Contenu de $($dir.FullName) :"
-              Get-ChildItem -Path $dir.FullName -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
-          }
-          
+
           # Vérifie spécifiquement si les dossiers dist et artifacts existent avant d'y accéder
           $folders = @("dist", "artifacts")
           foreach ($folder in $folders) {
@@ -182,6 +172,10 @@ jobs:
         run: |
           # Compresser le dossier Converter
           Compress-Archive -Path "artifacts" -DestinationPath "artifacts.zip"
+
+      - name: Démarrer une session SSH avec tmate
+        if: inputs.debugssh == 'true'
+        uses: mxschmitt/action-tmate@v3
           
       - name: Upload artifact for testing
         uses: actions/upload-artifact@v4
