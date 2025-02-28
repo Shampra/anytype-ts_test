@@ -66,13 +66,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.TOKEN}}
 
-      #- name: Update Deps
-      #  run: npm run build:deps
-
       - name: Update Addon only AMD
         shell: bash
         run: |
-          ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="${{matrix.os}}" --middleware-version="$( cat middleware.version )"
+          ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="windows-latest" --middleware-version="$( cat middleware.version )"
 
       - name: Build Native Messaging Host Windows
         run: npm run build:nmh-win
