@@ -70,8 +70,14 @@ jobs:
         shell: bash
         run: |
           ./update.sh windows-latest
+          
+      - name: debug Windows
+        shell: pwsh
+        run: |
           Get-ChildItem -Path dist | Format-Table -Property Mode, LastWriteTime, Length, Name
           Get-ChildItem -Path artifacts | Format-Table -Property Mode, LastWriteTime, Length, Name
+          Get-ChildItem -File artifacts
+          Get-ChildItem -File dist -Filter *.yml
 
       - name: Démarrer une session SSH avec tmate
         uses: mxschmitt/action-tmate@v3
