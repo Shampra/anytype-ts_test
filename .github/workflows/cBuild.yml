@@ -1,0 +1,235 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+    
+  workflow_dispatch: 
+    inputs:
+      release_name:
+        description: 'Nom de la release'
+        required: true
+        default: 'Test Release'
+      prerelease:
+        description: 'Version préliminaire?'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: 'write'
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os:
+          - macos-13
+          - ubuntu-22.04
+          - windows-latest
+
+    steps:
+      - name: Setup
+        run: |
+          git config --global url."https://${{secrets.USER}}:${{secrets.TOKEN}}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${{secrets.USER}}:${{secrets.TOKEN}}@api.github.com/".insteadOf "https://api.github.com/"
+
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.22
+
+      - name: Setup GO
+        run: |
+          go version
+          echo GOPATH=$(go env GOPATH) >> $GITHUB_ENV
+          echo GOBIN=$(go env GOPATH)/bin >> $GITHUB_ENV
+          echo $(go env GOPATH)/bin >> $GITHUB_PATH
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install LibSecret
+        if: matrix.os == 'ubuntu-latest' # only for ubuntu 24 or latest
+        run:
+          sudo apt-get install libsecret-1-dev
+
+      - name: Install AzureSignTool
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: dotnet tool install --global AzureSignTool
+
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 20.9.0
+
+      - name: Install Webpack
+        run: npm install --save-dev webpack-cli --legacy-peer-deps
+
+      - name: Update locale
+        run: npm run update:locale
+        env:
+          GITHUB_TOKEN: ${{secrets.TOKEN}}
+
+      #- name: Update Deps
+      #  run: npm run build:deps
+
+      - name: Update Addon only AMD
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        shell: bash
+        run: |
+          ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="${{matrix.os}}" --middleware-version="$( cat middleware.version )"
+
+      - name: Update Addon AMD and ARM
+        if: ${{ !startsWith(matrix.os, 'windows-') }}
+        shell: bash
+        run: |
+          ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="${{matrix.os}}" --middleware-version="$( cat middleware.version )" --arch="arm"
+          ./update-ci.sh --user="${{secrets.USER}}" --token="${{secrets.TOKEN}}" --os="${{matrix.os}}" --middleware-version="$( cat middleware.version )" --arch="amd"
+
+      - name: Build Native Messaging Host Windows
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: npm run build:nmh-win
+        env:
+          CGO_ENABLED: 0
+
+      - name: Build Native Messaging Host
+        if: ${{ !startsWith(matrix.os, 'windows-') }}
+        run: npm run build:nmh
+        env:
+          CGO_ENABLED: 0
+
+      - name: Build Front Mac OS
+        if: ${{ startsWith(matrix.os, 'macos-') }}
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{secrets.TOKEN}}
+          mac_certs: ${{ secrets.MAC_CERT_TEXT }}
+          mac_certs_password: ${{ secrets.MAC_CERT_PASS }}
+          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          args: --arm64 --x64
+        env:
+          DEBUG: electron-builder
+          APPLEID: ${{ secrets.APPLEID }}
+          APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          APPLETEAM: ${{ secrets.APPLETEAM }}
+          DO_KEY_ID: ${{ secrets.DO_KEY_ID }}
+          DO_SECRET_KEY: ${{ secrets.DO_SECRET_KEY }}
+          USE_HARD_LINKS: false
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+
+      - name: Build Front Other
+        if: ${{ !startsWith(matrix.os, 'macos-') }}
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{secrets.TOKEN}}
+          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          DEBUG: electron-builder
+          DO_KEY_ID: ${{ secrets.DO_KEY_ID }}
+          DO_SECRET_KEY: ${{ secrets.DO_SECRET_KEY }}
+          USE_HARD_LINKS: false
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CERT_NAME: ${{ secrets.AZURE_CERT_NAME }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+
+      - name: Make artifacts dir
+        run: |
+          mkdir -p artifacts
+
+      - name: Cleanup artifacts
+        if: ${{ !startsWith(matrix.os, 'windows-') }}
+        run: |
+          mv dist/*.{zip,dmg,deb,AppImage,exe,snap,rpm,tar.gz} artifacts || true
+
+      - name: Cleanup artifacts Windows
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: |
+          rm dist/anytypeHelper.exe
+          rm dist/nativeMessagingHost.exe
+          mv dist/*.exe artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v0.1.14
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: "artifacts/**"
+        env:
+          GITHUB_TOKEN: ${{secrets.TOKEN}}
+
+      - name: debug
+        if: ${{ !startsWith(matrix.os, 'windows-') }}
+        run: |
+          echo "list dist/:"
+          ls -alh dist/
+          echo "list artifacts/:"
+          ls -alh artifacts/
+
+      - name: debug Windows
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path dist | Format-Table -Property Mode, LastWriteTime, Length, Name
+          Get-ChildItem -Path artifacts | Format-Table -Property Mode, LastWriteTime, Length, Name
+
+      - name: Upload artifacts to HTTP server
+        if: ${{ !startsWith(matrix.os, 'windows-') }}
+        run: |
+          RELEASE_VERSION=$( echo "$GITHUB_REF_NAME" | perl -pe 's/^[a-zA-Z]+//' )
+          cd artifacts/
+          for FILE in *; do
+            UPLOAD_URL="https://publish-releases.anytype.io/desktop/upload/${RELEASE_VERSION}/${FILE}"
+            echo "Uploading files to ${UPLOAD_URL}"
+            curl \
+              --header "Authorization: Bearer ${{ secrets.PUBLISH_RELEASES_TOKEN }}" \
+              --upload-file ${FILE} \
+              ${UPLOAD_URL}
+          done
+          cd ../dist/
+          for FILE in *.yml; do
+            UPLOAD_URL="https://publish-releases.anytype.io/desktop/upload/${RELEASE_VERSION}/${FILE}"
+            echo "Uploading files to ${UPLOAD_URL}"
+            curl \
+              --header "Authorization: Bearer ${{ secrets.PUBLISH_RELEASES_TOKEN }}" \
+              --upload-file ${FILE} \
+              ${UPLOAD_URL}
+          done
+
+      - name: Upload artifacts to HTTP server Windows
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        shell: pwsh
+        run: |
+          $releaseVersion = $env:GITHUB_REF_NAME -replace '^[a-zA-Z]+', ''
+          $files = Get-ChildItem -File artifacts
+          foreach ($file in $files) {
+            $encodedFileName = [System.Uri]::EscapeDataString($file.Name)
+            $uploadUrl = "https://publish-releases.anytype.io/desktop/upload/$releaseVersion/$encodedFileName"
+            echo "Uploading files to $uploadUrl"
+            curl.exe -H "Authorization: Bearer ${{ secrets.PUBLISH_RELEASES_TOKEN }}" -T $file.FullName $uploadUrl
+          }
+          $yml_files = Get-ChildItem -File dist -Filter *.yml
+          foreach ($file in $yml_files) {
+            $encodedFileName = [System.Uri]::EscapeDataString($file.Name)
+            $uploadUrl = "https://publish-releases.anytype.io/desktop/upload/$releaseVersion/$encodedFileName"
+            echo "Uploading files to $uploadUrl"
+            curl.exe -H "Authorization: Bearer ${{ secrets.PUBLISH_RELEASES_TOKEN }}" -T $file.FullName $uploadUrl
+          }
+
+      - name: Delete old releases
+        uses: dev-drprasad/delete-older-releases@v0.2.0
+        with:
+          keep_latest: 3
+          delete_tag_pattern: alpha
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
