@@ -74,10 +74,33 @@ jobs:
       - name: debug Windows
         shell: pwsh
         run: |
-          Get-ChildItem -Path dist | Format-Table -Property Mode, LastWriteTime, Length, Name
-          Get-ChildItem -Path artifacts | Format-Table -Property Mode, LastWriteTime, Length, Name
-          Get-ChildItem -File artifacts
-          Get-ChildItem -File dist -Filter *.yml
+          # Affiche le contenu du répertoire courant
+          Write-Host "📂 Contenu du répertoire courant :"
+          Get-ChildItem -Path . -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+          
+          # Liste récursivement les fichiers dans chaque dossier existant
+          $dirs = Get-ChildItem -Directory -ErrorAction SilentlyContinue
+          foreach ($dir in $dirs) {
+              Write-Host "`n📁 Contenu de $($dir.FullName) :"
+              Get-ChildItem -Path $dir.FullName -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+          }
+          
+          # Vérifie spécifiquement si les dossiers dist et artifacts existent avant d'y accéder
+          $folders = @("dist", "artifacts")
+          foreach ($folder in $folders) {
+              if (Test-Path $folder) {
+                  Write-Host "`n📁 Contenu de $folder :"
+                  Get-ChildItem -Path $folder -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📄 Fichiers uniquement dans $folder :"
+                  Get-ChildItem -Path $folder -File -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📝 Fichiers YAML dans $folder :"
+                  Get-ChildItem -Path $folder -File -Filter *.yml -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+              } else {
+                  Write-Host "`n⚠️ Le dossier $folder n'existe pas."
+              }
+          }
 
       - name: Démarrer une session SSH avec tmate
         uses: mxschmitt/action-tmate@v3
@@ -127,10 +150,33 @@ jobs:
       - name: debug Windows
         shell: pwsh
         run: |
-          Get-ChildItem -Path dist | Format-Table -Property Mode, LastWriteTime, Length, Name
-          Get-ChildItem -Path artifacts | Format-Table -Property Mode, LastWriteTime, Length, Name
-          Get-ChildItem -File artifacts
-          Get-ChildItem -File dist -Filter *.yml
+          # Affiche le contenu du répertoire courant
+          Write-Host "📂 Contenu du répertoire courant :"
+          Get-ChildItem -Path . -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+          
+          # Liste récursivement les fichiers dans chaque dossier existant
+          $dirs = Get-ChildItem -Directory -ErrorAction SilentlyContinue
+          foreach ($dir in $dirs) {
+              Write-Host "`n📁 Contenu de $($dir.FullName) :"
+              Get-ChildItem -Path $dir.FullName -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+          }
+          
+          # Vérifie spécifiquement si les dossiers dist et artifacts existent avant d'y accéder
+          $folders = @("dist", "artifacts")
+          foreach ($folder in $folders) {
+              if (Test-Path $folder) {
+                  Write-Host "`n📁 Contenu de $folder :"
+                  Get-ChildItem -Path $folder -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📄 Fichiers uniquement dans $folder :"
+                  Get-ChildItem -Path $folder -File -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📝 Fichiers YAML dans $folder :"
+                  Get-ChildItem -Path $folder -File -Filter *.yml -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+              } else {
+                  Write-Host "`n⚠️ Le dossier $folder n'existe pas."
+              }
+          }
 
       - name: Rename and Zip the executable
         run: |
