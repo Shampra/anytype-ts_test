@@ -21,18 +21,16 @@ const PreviewDefault = observer(forwardRef<{}, Props>((props, ref) => {
 		setObject: setParentObject,
 	} = props;
 	const [ isLoading, setIsLoading ] = useState(false);
-	const [ object, setObject ] = useState(initialObject || {});
+	const [ object, setObject ] = useState(initialObject);
 	const idRef = useRef(null);
 	const cn = [ 'previewDefault', className ];
-	const type = S.Record.getTypeById(object.type);
+	const type = S.Record.getTypeById(object?.type);
 
-	if (U.Object.isParticipantLayout(object.layout)) {
+	if (object && U.Object.isParticipantLayout(object.layout)) {
 		object.name = object.globalName || object.name;
 	};
 
 	const load = () => {
-		console.log(rootId, idRef.current);
-
 		if (isLoading || (idRef.current == rootId)) {
 			return;
 		};
@@ -51,8 +49,6 @@ const PreviewDefault = observer(forwardRef<{}, Props>((props, ref) => {
 	};
 
 	useEffect(() => {
-		console.log(initialObject);
-
 		if (initialObject) {
 			setObject(initialObject);
 		};
