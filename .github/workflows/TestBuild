@@ -1,0 +1,180 @@
+name: Custom release
+
+on:
+  push:
+    tags:
+      - v*
+    
+  workflow_dispatch: 
+    inputs:
+      prerelease:
+        description: 'Version test?'
+        required: false
+        type: boolean
+        default: true
+      debugssh:
+        description: 'Accès SSH?'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: 'write'
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Setup
+        run: |
+          git config --global url."https://${{secrets.USER}}:${{secrets.TOKEN}}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${{secrets.USER}}:${{secrets.TOKEN}}@api.github.com/".insteadOf "https://api.github.com/"
+
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.22
+
+      - name: Setup GO
+        run: |
+          go version
+          echo GOPATH=$(go env GOPATH) >> $GITHUB_ENV
+          echo GOBIN=$(go env GOPATH)/bin >> $GITHUB_ENV
+          echo $(go env GOPATH)/bin >> $GITHUB_PATH
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install AzureSignTool
+        run: dotnet tool install --global AzureSignTool
+
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 20.9.0
+
+      - name: Install Webpack
+        run: npm install --save-dev webpack-cli --legacy-peer-deps
+
+      - name: Update locale
+        run: npm run update:locale
+        env:
+          GITHUB_TOKEN: ${{secrets.TOKEN}}
+
+      - name: Update Addon 
+        shell: bash
+        run: |
+          ./update.sh windows-latest
+          
+      - name: debug Windows
+        shell: pwsh
+        run: |
+          # Affiche le contenu du répertoire courant
+          Write-Host "📂 Contenu du répertoire courant :"
+          Get-ChildItem -Path . -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+  
+          # Vérifie spécifiquement si les dossiers dist et artifacts existent avant d'y accéder
+          $folders = @("dist", "artifacts")
+          foreach ($folder in $folders) {
+              if (Test-Path $folder) {
+                  Write-Host "`n📁 Contenu de $folder :"
+                  Get-ChildItem -Path $folder -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📄 Fichiers uniquement dans $folder :"
+                  Get-ChildItem -Path $folder -File -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📝 Fichiers YAML dans $folder :"
+                  Get-ChildItem -Path $folder -File -Filter *.yml -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+              } else {
+                  Write-Host "`n⚠️ Le dossier $folder n'existe pas."
+              }
+          }
+
+      - name: Build Native Messaging Host Windows
+        run: npm run build:nmh-win
+        env:
+          CGO_ENABLED: 0
+
+      - name: Build Front Other
+        if: ${{ !startsWith(matrix.os, 'macos-') }}
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{secrets.TOKEN}}
+          release: v0.46.0-primitives3
+        env:
+          DEBUG: electron-builder
+          DO_KEY_ID: ${{ secrets.DO_KEY_ID }}
+          DO_SECRET_KEY: ${{ secrets.DO_SECRET_KEY }}
+          USE_HARD_LINKS: false
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CERT_NAME: ${{ secrets.AZURE_CERT_NAME }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SENTRY_AUTH_TOKEN: ${{secrets.SENTRY_AUTH_TOKEN}}
+          ELECTRON_SKIP_NOTARIZE: 1
+          ELECTRON_SKIP_SENTRY: 1
+          
+      - name: Make artifacts dir
+        run: |
+          mkdir -p artifacts
+
+      - name: Cleanup artifacts Windows
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: |
+          rm dist/anytypeHelper.exe
+          rm dist/nativeMessagingHost.exe
+          mv dist/*.exe artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v0.1.14
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: "artifacts/**"
+        env:
+          GITHUB_TOKEN: ${{secrets.TOKEN}}
+
+      - name: debug Windows
+        shell: pwsh
+        run: |
+          # Affiche le contenu du répertoire courant
+          Write-Host "📂 Contenu du répertoire courant :"
+          Get-ChildItem -Path . -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+
+          # Vérifie spécifiquement si les dossiers dist et artifacts existent avant d'y accéder
+          $folders = @("dist", "artifacts")
+          foreach ($folder in $folders) {
+              if (Test-Path $folder) {
+                  Write-Host "`n📁 Contenu de $folder :"
+                  Get-ChildItem -Path $folder -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📄 Fichiers uniquement dans $folder :"
+                  Get-ChildItem -Path $folder -File -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+                  
+                  Write-Host "`n📝 Fichiers YAML dans $folder :"
+                  Get-ChildItem -Path $folder -File -Filter *.yml -Force | Format-Table -Property Mode, LastWriteTime, Length, Name
+              } else {
+                  Write-Host "`n⚠️ Le dossier $folder n'existe pas."
+              }
+          }
+
+      - name: Rename and Zip the executable
+        run: |
+          # Compresser le dossier Converter
+          Compress-Archive -Path "dist" -DestinationPath "dist.zip"
+
+      - name: Démarrer une session SSH avec tmate
+        if: inputs.debugssh == 'true'
+        uses: mxschmitt/action-tmate@v3
+          
+      - name: Upload artifact for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist.zip
