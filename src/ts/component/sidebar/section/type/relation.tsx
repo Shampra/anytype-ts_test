@@ -237,41 +237,43 @@ const SidebarSectionTypeRelation = observer(forwardRef<I.SidebarSectionRef, I.Si
 		);
 	};
 
-	const List = (list: any) => {
-		return (
-			<SortableContext 
-				items={list.data.map(it => it.id)} 
-				strategy={verticalListSortingStrategy}
-			>
-				<div className="sectionNameWrap">
-					<Label text={list.name} />
-					{list.onInfo ? <Icon className="question withBackground" onClick={list.onInfo} /> : ''}
-				</div>
-				<div className="items">
-					{list.data.length ? (
-						<>
-							{list.data.map((item, i) => (
-								<Item 
-									key={[ list.id, item.id ].join('-')} 
-									{...item} 
-									list={list}
-									index={i}
-									disabled={readonly}
-								/>
-							))}
-						</>
-					) : (
-						<Item 
-							key={[ list.id, 'empty' ].join('-')} 
-							{...{ id: 'empty', name: translate('sidebarTypeRelationEmpty'), isEmpty: true }} 
-							list={list}
-							disabled={true}
-						/>
-					)}
-				</div>
-			</SortableContext>
-		);
+	const emptyId = (id: I.SidebarRelationList) => {
+		return [ id, 'empty' ].join('-');
 	};
+
+	const List = (list: any) => (
+		<SortableContext 
+			items={list.data.map(it => it.id)} 
+			strategy={verticalListSortingStrategy}
+		>
+			<div className="sectionNameWrap">
+				<Label text={list.name} />
+				{list.onInfo ? <Icon className="question withBackground" onClick={list.onInfo} /> : ''}
+			</div>
+			<div className="items">
+				{list.data.length ? (
+					<>
+						{list.data.map((item, i) => (
+							<Item 
+								key={[ list.id, item.id ].join('-')} 
+								{...item} 
+								list={list}
+								index={i}
+								disabled={readonly}
+							/>
+						))}
+					</>
+				) : (
+					<Item 
+						key={emptyId(list.id)} 
+						{...{ id: emptyId(list.id), name: translate('sidebarTypeRelationEmpty'), isEmpty: true }} 
+						list={list}
+						disabled={true}
+					/>
+				)}
+			</div>
+		</SortableContext>
+	);
 
 	useImperativeHandle(ref, () => ({
 		forceUpdate: () => setDummy(dummy + 1),

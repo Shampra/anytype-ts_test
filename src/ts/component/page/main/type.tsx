@@ -1,13 +1,12 @@
-import React, { forwardRef, useState, useEffect, useRef } from 'react';
+import React, { forwardRef, useEffect, useRef } from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
-import { Icon, Header, Footer, Loader, ListObjectPreview, Deleted, HeadSimple, Block } from 'Component';
-import { I, C, S, U, J, focus, Action, analytics, Relation, translate, keyboard, sidebar } from 'Lib';
+import { Icon, Header, Footer, ListObjectPreview, Deleted, HeadSimple, Block } from 'Component';
+import { I, C, S, U, J, focus, Action, analytics, translate, keyboard, sidebar } from 'Lib';
 
 const PageMainType = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 
 	const { isPopup } = props;
-	const [ isLoading, setIsLoading ] = useState(false);
 	const headerRef = useRef(null);
 	const headRef = useRef(null);
 	const idRef = useRef(null);
@@ -16,7 +15,6 @@ const PageMainType = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 	const rootId = getRootId();
 	const type = S.Detail.get(rootId, rootId, U.Data.typeRelationKeys());
 	const subIdTemplate = S.Record.getSubId(rootId, 'templates');
-	const subIdObject = S.Record.getSubId(rootId, 'data');
 	const canShowTemplates = !U.Object.getLayoutsWithoutTemplates().includes(type.recommendedLayout) && (type.uniqueKey != J.Constant.typeKey.template);
 
 	const open = () => {
@@ -27,13 +25,10 @@ const PageMainType = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 		};
 
 		close();
-		setIsLoading(true);
 
 		idRef.current = rootId;
 
 		C.ObjectOpen(rootId, '', U.Router.getRouteSpaceId(), (message: any) => {
-			setIsLoading(false);
-
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code, this)) {
 				return;
 			};
@@ -65,6 +60,7 @@ const PageMainType = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 	};
 
 	const loadTemplates = () => {
+		const rootId = getRootId();
 		const type = S.Detail.get(rootId, rootId);
 
 		U.Data.searchSubscribe({
@@ -252,7 +248,7 @@ const PageMainType = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 	const isAllowedTemplate = type?.isInstalled && isAllowedObject() && canShowTemplates;
 	const allowedBlock = type.isInstalled && S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Block ]);
 	const templates = S.Record.getRecordIds(subIdTemplate, '');
-	const totalObject = S.Record.getMeta(subIdObject, '').total;
+	const totalObject = S.Record.getMeta(S.Record.getSubId(rootId, J.Constant.blockId.dataview), '').total;
 	const totalTemplate = templates.length;
 	const isFileType = U.Object.isInFileLayouts(type.recommendedLayout);
 	const columns: any[] = [
@@ -284,8 +280,6 @@ const PageMainType = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 					ref={headerRef}
 					rootId={rootId}
 				/>
-
-				{isLoading ? <Loader id="loader" /> : ''}
 
 				<div className="blocks wrapper">
 					<HeadSimple
