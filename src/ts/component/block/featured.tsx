@@ -46,13 +46,8 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		const { rootId, block, size, iconSize, isPopup } = this.props;
 		const allowedValue = S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Details ]);
 		const items = this.getItems();
-		const keys = items.map(it => it.relationKey);
-		const hasType = keys.includes('type');
-		const hasSetOf = keys.includes('setOf');
-
-		const skipIds = [ 'type', 'description', 'setOf' ];
-		const list = items.filter(it => !skipIds.includes(it.relationKey));
 		const object = this.getObject();
+		const type = S.Detail.get(rootId, object.type, []);
 
 		return (
 			<div 
@@ -62,12 +57,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 				onKeyDown={this.onKeyDown} 
 				onKeyUp={this.onKeyUp}
 			>
-
-				{hasType ? this.renderType() : ''}
-				{hasSetOf ? this.renderSetOf() : ''}
-				{this.renderIdentity()}
-
-				{list.map((relation: any, i: any) => {
+				{items.map((relation: any, i: any) => {
 					const id = Relation.cellId(PREFIX, relation.relationKey, object.id);
 					const value = object[relation.relationKey];
 					const canEdit = allowedValue && !relation.isReadonlyValue;
@@ -75,6 +65,18 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 
 					if (i == items.length - 1) {
 						cn.push('last');
+					};
+
+					if (relation.relationKey == 'type') {
+						return this.renderType();
+					};
+
+					if (relation.relationKey == 'setOf') {
+						return this.renderSetOf();
+					};
+
+					if (relation.relationKey == 'identity') {
+						return this.renderIdentity();
 					};
 
 					if ([ 'links', 'backlinks' ].includes(relation.relationKey)) {
@@ -104,8 +106,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 								isInline={true}
 								idPrefix={PREFIX}
 								elementMapper={this.elementMapper}
-								showTooltip={true}
-								tooltipX={I.MenuDirection.Left}
+								tooltipParam={{ text: relation.name, typeX: I.MenuDirection.Left }}
 								arrayLimit={relation.format == I.RelationType.Object ? 1 : 2}
 								textLimit={150}
 								onMouseLeave={this.onMouseLeave}
@@ -158,7 +159,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 	renderType () {
 		const { rootId } = this.props;
 		const object = this.getObject();
-		const type = S.Detail.get(rootId, object.type, [ 'name', 'isDeleted' ]);
+		const type = S.Detail.get(rootId, object.type, []);
 		const name = (
 			<div className="name">
 				<ObjectType object={type} />
@@ -166,17 +167,16 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		);
 
 		let ret = null;
-
 		if (U.Object.isTemplate(object.type)) {
 			ret = (
-				<span className="cell">
+				<span className="cell" key="type">
 					<div className="cellContent type disabled">{name}</div>
 					<div className="bullet" />
 				</span>
 			);
 		} else {
 			ret = (
-				<span className="cell canEdit">
+				<span className="cell canEdit" key="type">
 					<div
 						id={Relation.cellId(PREFIX, 'type', object.id)}
 						className="cellContent type"
@@ -198,11 +198,16 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		const { rootId, readonly } = this.props;
 		const storeId = this.getStoreId();
 		const object = this.getObject();
-		const types = Relation.getSetOfObjects(rootId, storeId, I.ObjectLayout.Type).map(it => it.name);
-		const relations = Relation.getSetOfObjects(rootId, storeId, I.ObjectLayout.Relation).map(it => it.name);
+		const types = Relation.getSetOfObjects(rootId, storeId, I.ObjectLayout.Type).map(it => U.Object.name(it));
+		const relations = Relation.getSetOfObjects(rootId, storeId, I.ObjectLayout.Relation).map(it => U.Object.name(it.name));
 		const setOfString = [];
 		const tl = types.length;
 		const rl = relations.length;
+		const cn = [ 'cell' ];
+
+		if (!readonly) {
+			cn.push('canEdit');
+		};
 
 		if (tl) {
 			setOfString.push(U.Common.sprintf('%s: %s', U.Common.plural(tl, translate('pluralObjectType')), types.slice(0, SOURCE_LIMIT).join(', ')));
@@ -220,7 +225,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		};
 
 		return (
-			<span className={[ 'cell', (!readonly ? 'canEdit' : '') ].join(' ')}>
+			<span className={cn.join(' ')} key="setOf">
 				<div
 					id={Relation.cellId(PREFIX, 'setOf', object.id)}
 					className="cellContent setOf"
@@ -252,11 +257,11 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 			return null;
 		};
 
-		const object = S.Detail.get(rootId, storeId, U.Data.participantRelationKeys());
+		const object = S.Detail.get(rootId, storeId, U.Subscription.participantRelationKeys());
 		const relationKey = object.globalName ? 'globalName': 'identity';
 
 		return (
-			<span className="cell">
+			<span className="cell" key="identity">
 				<div
 					id={Relation.cellId(PREFIX, relationKey, object.id)}
 					className="cellContent c-longText"
@@ -388,7 +393,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		const object = S.Detail.get(rootId, rootId, [ 'setOf' ]);
 		const type = S.Detail.get(rootId, object.type, []);
 		const allowed = S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Type ]);
-		const typeIsDeleted = type._empty_ || type.isDeleted;
+		const typeIsDeleted = type._empty_ || type.isDeleted || type.isArchived;
 		const options: any[] = [];
 
 		if (!typeIsDeleted) {
@@ -450,14 +455,16 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 
 		switch (item.id) {
 			case 'change':
+				const layouts = U.Object.isCollectionLayout(object.layout) ? [ I.ObjectLayout.Collection ] : U.Object.getPageLayouts();
+
 				menuId = 'typeSuggest';
 				menuParam.data = Object.assign(menuParam.data, {
 					filter: '',
 					filters: [
-						{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts() },
-						{ relationKey: 'uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template },
+						{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: layouts },
+						{ relationKey: 'uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template, J.Constant.typeKey.type ] }
 					],
-					keys: U.Data.typeRelationKeys(),
+					keys: U.Subscription.typeRelationKeys(),
 					skipIds: [ object.type ],
 					onClick: (item: any) => {
 						keyboard.disableClose(true);
@@ -564,6 +571,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 
 					keyboard.disableClose(true);
 					U.Object.openAuto({ id: rootId, layout: I.ObjectLayout.Collection }, { replace: true });
+					keyboard.disableClose(false);
 					window.setTimeout(() => { Preview.toastShow({ text: U.Common.sprintf(translate('toastTurnIntoCollection'), object.name) }); }, 200);
 
 					analytics.event('SetTurnIntoCollection');
@@ -829,12 +837,19 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 
 		let ret = [];
 		if (!keys.length) {
-			ret = S.Record.getTypeFeaturedRelations(short.targetObjectType || short.type);
+			const typeId = short.targetObjectType || short.type;
+			const type = S.Record.getTypeById(typeId);
+
+			if (!type || type.isDeleted) {
+				ret = [ S.Record.getRelationByKey('type') ];
+			} else {
+				ret = S.Record.getTypeFeaturedRelations(typeId);
+			};
 		} else {
 			ret = keys.map(it => S.Record.getRelationByKey(it));
 		};
 
-		return ret.filter(it => it);
+		return ret.filter(it => it && !it.isDeleted && !it.isArchived);
 	};
 	
 });

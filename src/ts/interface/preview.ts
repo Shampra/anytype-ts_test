@@ -23,6 +23,7 @@ export interface PreviewLink {
 
 export interface Preview {
 	type?: PreviewType,
+	markType?: I.MarkType;
 	target?: string; /** object ID or URL */
 	object?: any;
 	element?: JQuery<HTMLElement>;
@@ -33,6 +34,7 @@ export interface Preview {
 	noEdit?: boolean;
 	passThrough?: boolean;
 	noAnimation?: boolean;
+	withPlural?: boolean;
 	delay?: number;
 	x?: number;
 	y?: number;

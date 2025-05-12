@@ -25,6 +25,21 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 	const n = useRef(-1);
 	const [ dummy, setDummy ] = useState(0);
 	const items = U.Menu.getVaultItems();
+	const profile = U.Space.getProfile();
+	const itemsWithCounter = items.filter(it => {
+		if (!it.isButton) {
+			const counters = S.Chat.getSpaceCounters(it.targetSpaceId);
+			return counters.mentionCounter || counters.messageCounter;
+		};
+		return false;
+	}).sort((c1, c2) => U.Data.sortByNumericKey('lastMessageDate', c1, c2, I.SortType.Desc));
+
+	const itemsWithCounterIds = itemsWithCounter.map(it => it.id);
+	const itemsWithoutCounter = items.filter(it => !itemsWithCounterIds.includes(it.id));
+	const itemAdd = { id: 'add', name: translate('commonNewSpace'), isButton: true };
+	const itemSettings = { ...profile, id: 'settings', layout: I.ObjectLayout.Human };
+	const canCreate = U.Space.canCreateSpace();
+
 	const cn = [ 'vault' ];
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
@@ -69,7 +84,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 			pressed.current.add(key);
 		};
 
-		keyboard.shortcut('ctrl+tab, ctrl+shift+tab', e, pressed => {
+		keyboard.shortcut('nextSpace, prevSpace', e, pressed => {
 			checkKeyUp.current = true;
 			onArrow(pressed.match('shift') ? -1 : 1);
 
@@ -117,7 +132,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 		if (item) {
 			node.find('.item.hover').removeClass('hover');
 			if (item.targetSpaceId != S.Common.space) {
-				U.Router.switchSpace(item.targetSpaceId, '', true, { animate: true });
+				U.Router.switchSpace(item.targetSpaceId, '', true, { animate: true }, false);
 			};
 		};
 
@@ -161,7 +176,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 			};
 
 			default: {
-				U.Router.switchSpace(item.targetSpaceId, '', true, { animate: true });
+				U.Router.switchSpace(item.targetSpaceId, '', true, { replace: true, animate: true }, false);
 				break;
 			};
 		};
@@ -234,6 +249,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 			element: `#vault #item-${item.id}`,
 			vertical: I.MenuDirection.Center,
 			route: analytics.route.vault,
+			offsetX: 42,
 		});
 	};
 
@@ -254,6 +270,8 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 		keyboard.setDragging(false);
 
 		setDummy(dummy + 1);
+
+		analytics.event('ReorderSpace');
 	};
 
 	const onScroll = () => {
@@ -279,7 +297,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 			className: 'fromVault', 
 			typeX: I.MenuDirection.Left,
 			typeY: I.MenuDirection.Center,
-			offsetX: 8,
+			offsetX: 42,
 			delay,
 		});
 	};
@@ -299,6 +317,8 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 	}, []);
 
 	useEffect(() => {
+		S.Chat.setBadge();
+
 		$(nodeRef.current).find('#scroll').scrollTop(top.current);
 		setActive(S.Block.spaceview);
 	});
@@ -310,8 +330,6 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 		setActive,
 		getNode: () => nodeRef.current,
 	}));
-
-	const itemSettings = { id: 'settings', name: translate('commonSettings'), isButton: true };	
 
 	return (
 		<div 
@@ -333,7 +351,20 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 						strategy={verticalListSortingStrategy}
 					>
 						<div id="scroll" className="side top" onScroll={onScroll}>
-							{items.map((item, i) => (
+							{itemsWithCounter.map((item, i) => (
+								<VaultItem 
+									key={`item-space-${item.id}`}
+									item={item}
+									onClick={e => onClick(e, item)}
+									onMouseEnter={e => onMouseEnter(e, item)}
+									onMouseLeave={() => Preview.tooltipHide()}
+									onContextMenu={item.isButton ? null : e => onContextMenu(e, item)}
+								/>
+							))}
+
+							{itemsWithCounter.length > 0 ? <div className="div" /> : ''}
+
+							{itemsWithoutCounter.map((item, i) => (
 								<VaultItem 
 									key={`item-space-${item.id}`}
 									item={item}
@@ -346,8 +377,16 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 						</div>
 					</SortableContext>
 				</DndContext>
-
 				<div className="side bottom" onDragStart={e => e.preventDefault()}>
+					{canCreate ? (
+						<VaultItem 
+							item={itemAdd}
+							onClick={e => onClick(e, itemAdd)}
+							onContextMenu={null}
+							onMouseEnter={e => onMouseEnter(e, itemAdd)}
+							onMouseLeave={() => Preview.tooltipHide()}
+						/>
+					) : ''}
 					<VaultItem 
 						item={itemSettings}
 						onClick={e => onClick(e, itemSettings)}

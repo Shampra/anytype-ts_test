@@ -83,7 +83,7 @@ const MenuSyncStatus = observer(class MenuSyncStatus extends React.Component<I.M
 					</div>
 					<div className="side right">
 						<Icon className={icon} />
-						<Icon className="more withBackground" onClick={e => this.onContextMenu(e, item)} />
+						<Icon className="more" onClick={e => this.onContextMenu(e, item)} />
 					</div>
 				</div>
 			);
@@ -140,7 +140,7 @@ const MenuSyncStatus = observer(class MenuSyncStatus extends React.Component<I.M
 							rowCount={items.length}
 							isRowLoaded={({ index }) => !!items[index]}
 							threshold={LIMIT_HEIGHT}
-							loadMoreRows={() => { return; }}
+							loadMoreRows={() => {}}
 						>
 							{({ onRowsRendered }) => (
 								<AutoSizer className="scrollArea">
@@ -175,7 +175,7 @@ const MenuSyncStatus = observer(class MenuSyncStatus extends React.Component<I.M
 		this._isMounted = false;
 		this.onCloseInfo();
 
-		C.ObjectSearchUnsubscribe([ SUB_ID ]);
+		U.Subscription.destroyList([ SUB_ID ]);
 	};
 
 	onContextMenu (e, item) {
@@ -272,11 +272,11 @@ const MenuSyncStatus = observer(class MenuSyncStatus extends React.Component<I.M
 
 		this.setState({ isLoading: true });
 
-		U.Data.searchSubscribe({
+		U.Subscription.subscribe({
 			subId: SUB_ID,
 			filters,
 			sorts,
-			keys: U.Data.syncStatusRelationKeys(),
+			keys: U.Subscription.syncStatusRelationKeys(),
 			offset: 0,
 			limit: 30,
 		}, () => {

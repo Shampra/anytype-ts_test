@@ -30,10 +30,11 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 
 	render () {
 		const { param, position, close } = this.props;
-		const { data } = param;
+		const { data, noClose } = param;
 		const { key, current } = data;
-		const section = Onboarding.getSection(key);
-		const { items, showConfetti } = section;
+		const section = this.getSection();
+		const items = this.getItems();
+		const { showConfetti } = section;
 		const item = items[current];
 		const l = items.length;
 		const withSteps = l > 1;
@@ -74,7 +75,7 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 				ref={node => this.node = node}
 				className="wrap"
 			>
-				<Icon className="close" onClick={this.onClose} />
+				{!noClose ? <Icon className="close" onClick={this.onClose} /> : ''}
 
 				{category ? <Label className="category" text={category} /> : ''}
 				{item.name ? <Label className="name" text={item.name} /> : ''}
@@ -177,12 +178,21 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 		this.props.param.hiddenElements.forEach(el => $(el).addClass('isOnboardingHidden'));
 	};
 
+	getItems () {
+		return this.getSection()?.items || [];
+	};
+
 	initDimmer () {
 		const { param } = this.props;
 		const { data, highlightElements } = param;
 		const section = this.getSection();
+
+		if (!section) {
+			return;
+		};
+
 		const { current } = data;
-		const { items } = section;
+		const items = this.getItems();
 		const item = items[current];
 		const body = $('body');
 
@@ -314,7 +324,9 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 	};
 
 	onKeyDown (e: any) {
-		keyboard.shortcut('arrowleft, arrowright', e, (pressed: string) => this.onArrow(e, pressed == 'arrowleft' ? -1 : 1));
+		keyboard.shortcut('arrowleft, arrowright', e, pressed => this.onArrow(e, pressed == 'arrowleft' ? -1 : 1));
+
+		keyboard.shortcut('enter', e, () => this.onArrow(e, 1));
 	};
 
 	onButton (e: any, action: string) {
@@ -324,7 +336,7 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 
 		switch (action) {
 			case 'close': {
-				close();
+				this.onClose();
 				break;
 			};
 
@@ -339,6 +351,7 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 					offsetX: getSize().width,
 					vertical: I.MenuDirection.Center,
 					data: {
+						canAdd: true,
 						filter: '',
 						filters: [
 							{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts() },
@@ -348,7 +361,7 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 
 							S.Detail.update(rootId, { id: item.id, details: item }, false);
 
-							C.ObjectSetObjectType(rootId, item.id, () => {
+							C.ObjectSetObjectType(rootId, item.uniqueKey, () => {
 								U.Object.openAuto({ id: rootId, layout: item.recommendedLayout });
 							});
 
@@ -365,18 +378,17 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 	};
 
 	onArrow (e: any, dir: number) {
-		const { param, close } = this.props;
+		const { param } = this.props;
 		const { data } = param;
 		const { current } = data;
-		const section = this.getSection();
-		const { items } = section;
+		const items = this.getItems();
 
 		if ((dir < 0) && !current) {
 			return;
 		};
 
 		if ((dir > 0) && (current == items.length - 1)) {
-			close();
+			this.onClose();
 			return;
 		};
 
@@ -388,7 +400,7 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 		const { data, onOpen, onClose } = param;
 		const { isPopup, options } = data;
 		const section = this.getSection();
-		const { items } = section;
+		const items = this.getItems();
 		const item = items[next];
 
 		if (!item) {
@@ -469,7 +481,7 @@ const MenuOnboarding = observer(class MenuSelect extends React.Component<I.Menu,
 	};
 
 	getSection () {
-		return Onboarding.getSection(this.props.param.data.key);
+		return Onboarding.getSection(this.props.param.data.key) || {};
 	};
 
 });

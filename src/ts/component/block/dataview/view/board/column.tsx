@@ -93,8 +93,8 @@ const Column = observer(class Column extends React.Component<Props> {
 						</div>
 
 						<div className="side right">
-							<Icon id={`button-${id}-more`} className="more" tooltip={translate('blockDataviewBoardColumnSettings')} onClick={this.onMore} />
-							{isAllowedObject ? <Icon className="add" tooltip={tooltip} onClick={e => this.onAdd(e, -1)} /> : ''}
+							<Icon id={`button-${id}-more`} className="more" tooltipParam={{ text: translate('blockDataviewBoardColumnSettings') }} onClick={this.onMore} />
+							{isAllowedObject ? <Icon className="add" tooltipParam={{ text: tooltip }} onClick={e => this.onAdd(e, -1)} /> : ''}
 						</div>
 					</div>
 
@@ -136,10 +136,6 @@ const Column = observer(class Column extends React.Component<Props> {
 		this.load(true);
 	};
 
-	componentWillUnmount () {
-		this.clear();
-	};
-
 	load (clear: boolean) {
 		const { id, block, isCollection, value, getView, getKeys, getSubId, applyObjectOrder, getLimit, getTarget, getSearchIds } = this.props;
 		const object = getTarget();
@@ -173,32 +169,24 @@ const Column = observer(class Column extends React.Component<Props> {
 		};
 
 		if (clear) {
-			this.clear();
-			this.setState({ loading: true });
+			S.Record.recordsClear(subId, '');
 		};
 
-		U.Data.searchSubscribe({
-			subId,
-			filters: filters.map(it => Dataview.filterMapper(view, it)),
-			sorts: sorts.map(it => Dataview.filterMapper(view, it)),
-			keys: getKeys(view.id),
-			sources: object.setOf || [],
-			limit,
-			ignoreHidden: true,
-			ignoreDeleted: true,
-			collectionId: (isCollection ? object.id : ''),
-		}, () => {
-			S.Record.recordsSet(subId, '', applyObjectOrder(id, S.Record.getRecordIds(subId, '')));
-
-			if (clear) {
-				this.setState({ loading: false });
-			};
+		U.Subscription.destroyList([ subId ], false, () => {
+			U.Subscription.subscribe({
+				subId,
+				filters: filters.map(it => Dataview.filterMapper(view, it)),
+				sorts: sorts.map(it => Dataview.filterMapper(view, it)),
+				keys: getKeys(view.id),
+				sources: object.setOf || [],
+				limit,
+				ignoreHidden: true,
+				ignoreDeleted: true,
+				collectionId: (isCollection ? object.id : ''),
+			}, () => {
+				S.Record.recordsSet(subId, '', applyObjectOrder(id, S.Record.getRecordIds(subId, '')));
+			});
 		});
-	};
-
-	clear () {
-		const { getSubId } = this.props;
-		S.Record.recordsClear(getSubId(), '');
 	};
 
 	getItems () {

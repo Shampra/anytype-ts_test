@@ -59,16 +59,33 @@ const PageAuthSetup = observer(forwardRef<{}, I.PageComponent>((props, ref) => {
 			const routeParam = { 
 				replace: true,
 				onFadeIn: () => {
+					const whatsNew = Storage.get('whatsNew');
+					const primitivesOnboarding = Storage.get('primitivesOnboarding');
+
+					S.Common.getRef('mainAnimation')?.destroy();
+
 					[
 						I.SurveyType.Register, 
 						I.SurveyType.Object,
 						I.SurveyType.Pmf,
 					].forEach(it => Survey.check(it));
+
+					if (!primitivesOnboarding) {
+						S.Popup.open('onboarding', {
+							onClose: () => {
+								Storage.set('primitivesOnboarding', true);
+								window.setTimeout(() => U.Common.showWhatsNew(), J.Constant.delay.popup * 2);
+							},
+						});
+					} else
+					if (whatsNew) {
+						U.Common.showWhatsNew();
+					};
 				},
 			};
 
 			if (spaceId) {
-				U.Router.switchSpace(spaceId, '', false, routeParam);
+				U.Router.switchSpace(spaceId, '', false, routeParam, true);
 			} else {
 				U.Data.onAuthWithoutSpace(routeParam);
 			};

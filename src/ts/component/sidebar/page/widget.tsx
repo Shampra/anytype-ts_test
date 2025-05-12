@@ -40,6 +40,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 	render (): React.ReactNode {
 		const { isEditing, previewId } = this.state;
 		const { widgets } = S.Block;
+		const { showVault } = S.Common;
 		const cn = [ 'body' ];
 		const space = U.Space.getSpaceview();
 		const canWrite = U.Space.canMyParticipantWrite();
@@ -99,15 +100,33 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 				};
 
 				return true;
+			}).sort((a: I.Block, b: I.Block) => {
+				const c1 = this.getChild(a.id);
+				const c2 = this.getChild(b.id);
+
+				const t1 = c1?.getTargetObjectId();
+				const t2 = c2?.getTargetObjectId();
+
+				const isChat1 = t1 == J.Constant.widgetId.chat;
+				const isChat2 = t2 == J.Constant.widgetId.chat;
+
+				const isBin1 = t1 == J.Constant.widgetId.bin;
+				const isBin2 = t2 == J.Constant.widgetId.bin;
+
+				if (isChat1 && !isChat2) return -1;
+				if (!isChat1 && isChat2) return 1;
+
+				if (isBin1 && !isBin2) return 1;
+				if (!isBin1 && isBin2) return -1;
+
+				return 0;
 			});
 
-			let last = null;
 			let first = null;
 			let buttons: I.ButtonComponent[] = [];
 
 			if (blocks.length) {
 				first = blocks[0];
-				last = blocks[blocks.length - 1];
 			};
 
 			if (isEditing) {
@@ -196,6 +215,10 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		);
 	};
 
+	componentDidUpdate (): void {
+		this.onScroll();
+	};
+
 	onEdit (e: any): void {
 		e.stopPropagation();
 
@@ -210,6 +233,9 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		const { widgets } = S.Block;
 		const blocks = S.Block.getChildren(widgets, widgets, (block: I.Block) => block.isWidget());
 		const targets = [];
+		const node = $(this.node);
+		const body = node.find('#body');
+		const position = body.outerHeight() + 350 > node.outerHeight() ? I.MenuDirection.Top : I.MenuDirection.Bottom;
 
 		blocks.forEach(block => {
 			const children = S.Block.getChildren(widgets, block.id);
@@ -238,7 +264,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 					U.Object.openConfig(target);
 				};
 
-				analytics.event('AddWidget', { type: I.WidgetLayout.Link, route });
+				analytics.createWidget(I.WidgetLayout.Link, route, analytics.widgetType.manual);
 				analytics.event('ChangeWidgetSource', {
 					layout,
 					route: analytics.route.addWidget,
@@ -247,82 +273,40 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 			});					
 		};
 
-		let menuContext = null;
-
 		S.Menu.open('searchObjectWidgetAdd', {
 			component: 'searchObject',
 			element: '#widget-list-add',
 			className: 'fixed',
 			classNameWrap: 'fromSidebar',
 			offsetY: -4,
-			vertical: I.MenuDirection.Top,
-			onOpen: context => menuContext = context,
+			vertical: position,
 			subIds: J.Menu.widgetAdd,
 			data: {
 				route: analytics.route.addWidget,
+				withPlural: true,
 				filters: [
 					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getSystemLayouts() },
 					{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template },
 				],
-				/*
-				canAdd: true,
-				addParam: {
-					name: translate('commonCreateNewObject'),
-					nameWithFilter: translate('commonCreateObjectWithName'),
-					arrow: true,
-					onClick: (details: any) => {
-						const types = U.Data.getObjectTypesForNewObject({ withCollection: true, withSet: true, limit: 1 });
-
-						if (!types.length) {
-							return;
-						};
-
-						C.ObjectCreate(details, [], '', types[0].uniqueKey, S.Common.space, (message: any) => {
-							onSelect(message.details, true);
-						});
-					},
-				},
-				*/
-				onOver: (e, context: any, item: any) => {
-					if (!item.isAdd) {
-						S.Menu.closeAll(J.Menu.widgetAdd);
-						return;
-					};
-
-					U.Menu.typeSuggest({ 
-						element: `#${menuContext.getId()} #item-${item.id}`,
-						className: 'fixed',
-						classNameWrap: 'fromSidebar',
-						offsetX: menuContext.getSize().width,
-						vertical: I.MenuDirection.Center,
-						isSub: true,
-					}, { name: context.filter }, {}, analytics.route.addWidget, object => onSelect(object, true));
-				},
 				dataChange: (context: any, items: any[]) => {
 					const skipLayouts = U.Object.getSystemLayouts().concat(I.ObjectLayout.Type);
 					const reg = new RegExp(U.Common.regexEscape(context.filter), 'gi');
-					const fixed: any[] = U.Menu.getFixedWidgets().filter(it => it.name.match(reg));
+					const fixed: any[] = U.Menu.getSystemWidgets().filter(it => !targets.includes(it.id) && it.name.match(reg));
 					const types = S.Record.checkHiddenObjects(S.Record.getTypes()).
-						filter(it => !targets.includes(it.id) && !skipLayouts.includes(it.recommendedLayout) && it.name.match(reg)).
+						filter(it => !targets.includes(it.id) && !skipLayouts.includes(it.recommendedLayout) && !U.Object.isTemplate(it.id) && (it.name.match(reg) || it.pluralName.match(reg))).
 						map(it => ({ ...it, caption: '' }));
 					const lists = [];
 
-					if (types.length) {
-						lists.push([
-							{ name: translate('commonSuggested'), isSection: true }
-						].concat(types));
+					if (fixed.length) {
+						lists.push([ { name: translate('commonSystem'), isSection: true } ].concat(fixed));
 					};
 
-					if (fixed.length) {
-						lists.push([
-							{ name: translate('commonSystem'), isSection: true }
-						].concat(fixed));
+					if (types.length) {
+						lists.push([ { name: translate('commonSuggested'), isSection: true } ].concat(types));
 					};
 
 					if (items.length) {
-						lists.push([
-							{ name: translate('commonExistingObjects'), isSection: true }
-						].concat(items));
+						lists.push([ { name: translate('commonExistingObjects'), isSection: true } ].concat(items));
 					};
 
 					let ret = [];
@@ -345,6 +329,18 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 
 		const canWrite = U.Space.canMyParticipantWrite();
 		if (!canWrite) {
+			return;
+		};
+
+		const child = this.getChild(blockId);
+		if (!child) {
+			return;
+		};
+
+		const targetId = child.getTargetObjectId();
+
+		if ([ J.Constant.widgetId.chat, J.Constant.widgetId.bin ].includes(targetId)) {
+			e.preventDefault();
 			return;
 		};
 
@@ -387,7 +383,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		e.preventDefault();
 
 		const target = $(e.currentTarget);
-		const y = e.pageY - $(window).scrollTop();
+		const y = e.pageY;
 
 		raf.cancel(this.frame);
 		this.frame = raf(() => {
@@ -396,8 +392,19 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 
 			const { top } = target.offset();
 			const height = target.height();
+			const child = this.getChild(blockId);
 
 			this.position = y <= top + height / 2 ? I.BlockPosition.Top : I.BlockPosition.Bottom;
+
+			if (child) {
+				const t = child.getTargetObjectId();
+				if (t == J.Constant.widgetId.chat) {
+					this.position = I.BlockPosition.Bottom;
+				};
+				if (t == J.Constant.widgetId.bin) {
+					this.position = I.BlockPosition.Top;
+				};
+			};
 
 			target.addClass([ 'isOver', (this.position == I.BlockPosition.Top ? 'top' : 'bottom') ].join(' '));
 		});
@@ -489,6 +496,17 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 				keyboard.shortcut('escape', e, () => close(e));
 			});
 		}, S.Menu.getTimeout());
+	};
+
+	getChild (id: string): I.Block {
+		const { widgets } = S.Block;
+
+		const childrenIds = S.Block.getChildrenIds(widgets, id);
+		if (!childrenIds.length) {
+			return null;
+		};
+
+		return S.Block.getLeaf(widgets, childrenIds[0]);
 	};
 
 });

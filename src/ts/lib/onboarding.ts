@@ -11,7 +11,7 @@ class Onboarding {
 		options = options || {};
 
 		const section = this.getSection(key);
-		if (!section || !section.items || !section.items.length || (!force && Storage.getOnboarding(key))) {
+		if (!section || !section.items || !section.items.length || (!force && Storage.getOnboarding(key)) || !Storage.get('primitivesOnboarding')) {
 			return;
 		};
 
@@ -98,6 +98,7 @@ class Onboarding {
 			cnw.push('fromPopup');
 		};
 		if (section.showDimmer) {
+			param.menuKey = 'withDimmer';
 			cnw.push('fromOnboarding');
 		};
 		param.classNameWrap = cnw.join(' ');

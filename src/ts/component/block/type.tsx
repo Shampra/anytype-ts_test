@@ -1,7 +1,7 @@
 import * as React from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
-import { Icon } from 'Component';
+import { Icon, ObjectName } from 'Component';
 import { I, C, S, U, J, Onboarding, focus, keyboard, analytics, history as historyPopup, translate } from 'Lib';
 
 const BlockType = observer(class BlockType extends React.Component<I.BlockComponent> {
@@ -40,7 +40,7 @@ const BlockType = observer(class BlockType extends React.Component<I.BlockCompon
 					onMouseLeave={this.onOut}
 				>
 					{item.icon ? <Icon className={item.icon} /> : ''}
-					{item.name}
+					<ObjectName object={item} />
 				</div>
 			);
 		};
@@ -76,7 +76,7 @@ const BlockType = observer(class BlockType extends React.Component<I.BlockCompon
 		const object = S.Detail.get(rootId, rootId, []);
 		const items = U.Data.getObjectTypesForNewObject({ withCollection: true, withSet: true, limit: 5 }).filter(it => it.id != object.type);
 
-		items.push({ id: 'menu', icon: 'search', name: translate('blockTypeMyTypes') });
+		items.push({ id: 'menu', icon: 'search', name: translate('commonMyTypes') });
 
 		return items;
 	};
@@ -194,10 +194,11 @@ const BlockType = observer(class BlockType extends React.Component<I.BlockCompon
 				focus.apply();
 			},
 			data: {
+				canAdd: true,
 				filter: '',
 				filters: [
-					{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts().concat(U.Object.getSetLayouts()) },
-					{ relationKey: 'uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template }
+					{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getLayoutsForTypeSelection() },
+					{ relationKey: 'uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template, J.Constant.typeKey.type ] }
 				],
 				onClick: (item: any) => {
 					this.onClick(e, item);

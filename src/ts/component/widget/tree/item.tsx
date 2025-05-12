@@ -82,7 +82,7 @@ const TreeItem = observer(forwardRef<{}, Props>((props, ref) => {
 	};
 
 	if (hasMore) {
-		more = <Icon ref={moreRef} className="more" tooltip={translate('widgetOptions')} onMouseDown={e => onContextHandler(e, true)} />;
+		more = <Icon ref={moreRef} className="more" tooltipParam={{ text: translate('widgetOptions') }} onMouseDown={e => onContextHandler(e, true)} />;
 	};
 
 	if (isSection) {
@@ -103,14 +103,15 @@ const TreeItem = observer(forwardRef<{}, Props>((props, ref) => {
 					<IconObject 
 						id={`widget-icon-${treeKey}`}
 						object={object} 
-						size={18} 
+						size={20} 
+						iconSize={20}
 						canEdit={!isReadonly && !isArchived && allowedDetails && U.Object.isTaskLayout(object.layout)} 
 						menuParam={{ 
 							className: 'fixed',
 							classNameWrap: 'fromSidebar',
 						}}
 					/>
-					<ObjectName object={object} />
+					<ObjectName object={object} withPlural={true} />
 				</div>
 
 				<div className="buttons">{more}</div>

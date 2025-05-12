@@ -10,17 +10,9 @@ class Dataview {
 
 		const { config } = S.Common;
 		const order: any = {};
-		const object = S.Detail.get(rootId, rootId, []);
-		const isType = U.Object.isTypeLayout(object.layout);
 		const viewRelations = (view.relations || []).filter(it => it);
 
-		let relations = [];
-		if (isType) {
-			const typeIds = U.Object.getTypeRelationIds(object.id);
-			relations = J.Relation.default.map(it => S.Record.getRelationByKey(it)).concat(typeIds.map(it => S.Record.getRelationById(it)));
-		} else {
-			relations = S.Record.getDataviewRelations(rootId, blockId);
-		};
+		let relations = S.Record.getDataviewRelations(rootId, blockId);
 		relations = U.Common.objectCopy(relations).filter(it => it);
 
 		if (!config.debug.hiddenObject) {
@@ -118,7 +110,7 @@ class Dataview {
 			sorts: [],
 		}, param);
 
-		const { rootId, blockId, newViewId, keys, offset, limit, clear, collectionId } = param;
+		const { rootId, blockId, newViewId, keys, offset, limit, collectionId } = param;
 		const block = S.Block.getLeaf(rootId, blockId);
 		const view = S.Record.getView(rootId, blockId, newViewId);
 		
@@ -138,9 +130,6 @@ class Dataview {
 		if (viewChange) {
 			meta.viewId = newViewId;
 		};
-		if (viewChange || clear) {
-			S.Record.recordsSet(subId, '', []);
-		};
 
 		S.Record.metaSet(subId, '', meta);
 
@@ -153,7 +142,7 @@ class Dataview {
 			};
 		};
 
-		U.Data.searchSubscribe({
+		U.Subscription.subscribe({
 			...param,
 			subId,
 			filters: filters.map(it => this.filterMapper(view, it)),
@@ -168,16 +157,14 @@ class Dataview {
 	};
 
 	filterMapper (view: any, it: any) {
-		const relation = S.Record.getRelationByKey(it.relationKey);
-		const vr = view.getRelation(it.relationKey);
-
-		if (relation) {
-			it.format = relation.format;
+		if (!view) {
+			return it;
 		};
+
+		const vr = view.getRelation(it.relationKey);
 		if (vr && vr.includeTime) {
 			it.includeTime = true;
 		};
-
 		return it;
 	};
 
@@ -466,6 +453,8 @@ class Dataview {
 		const view = this.getView(rootId, blockId, viewId);
 		const types = Relation.getSetOfObjects(rootId, objectId, I.ObjectLayout.Type);
 		const relations = Relation.getSetOfObjects(rootId, objectId, I.ObjectLayout.Relation);
+		const object = S.Detail.get(rootId, rootId, [ 'type' ], true);
+		const type = S.Record.getTypeById(object.type);
 		const isAllowedDefaultType = this.isCollection(rootId, blockId) || !!relations.length;
 
 		let typeId = '';
@@ -492,9 +481,12 @@ class Dataview {
 			};
 		};
 
-		const type = S.Record.getTypeById(typeId);
+		if (!typeId && type && type.defaultTypeId) {
+			typeId = type.defaultTypeId;
+		};
 
-		if (!type) {
+		const check = S.Record.getTypeById(typeId);
+		if (!check) {
 			typeId = S.Common.type;
 		};
 
@@ -577,7 +569,6 @@ class Dataview {
 
 		const { total } = S.Record.getMeta(subId, '');
 		const isDate = relation.format == I.RelationType.Date;
-
 		const isArray = Relation.isArrayType(relation.format);
 		const needRecords = ![ I.FormulaType.None, I.FormulaType.Count ].includes(formulaType);
 		const records = needRecords ? S.Record.getRecords(subId, [ relationKey ], true) : [];
@@ -745,6 +736,45 @@ class Dataview {
 		};
 
 		return ret;
+	};
+
+	namePlaceholder (layout: I.ObjectLayout): string {
+		let ret = '';
+		if (U.Object.isCollectionLayout(layout)) {
+			ret = translate('defaultNameCollection');
+		} else 
+		if (U.Object.isTypeLayout(layout)) {
+			ret = translate('defaultNameType');
+		} else 
+		if (U.Object.isSetLayout(layout)) {
+			ret = translate('defaultNameSet');
+		};
+		return ret;
+	};
+
+	addTypeOrDataviewRelation (rootId: string, blockId: string, relation: any, object: any, view: I.View, index: number, callBack?: (message: any) => void) {
+		if (!rootId || !blockId || !relation || !object || !view) {
+			return;
+		};
+
+		const isType = U.Object.isTypeLayout(object.layout);
+
+		if (isType) {
+			const value = U.Common.arrayUnique(Relation.getArrayValue(object.recommendedRelations).concat(relation.id));
+
+			C.ObjectListSetDetails([ object.id ], [ { key: 'recommendedRelations', value } ], (message: any) => {
+				if (message.error.code) {
+					return;
+				};
+
+				S.Detail.update(J.Constant.subId.type, { id: rootId, details: { recommendedRelations: value } }, false);
+				C.BlockDataviewRelationSet(rootId, J.Constant.blockId.dataview, [ 'name', 'description' ].concat(U.Object.getTypeRelationKeys(rootId)), () => {
+					this.viewRelationAdd(rootId, blockId, relation.relationKey, index, view, callBack);
+				});
+			});
+		} else {
+			this.relationAdd(rootId, blockId, relation.relationKey, index, view, callBack);
+		};
 	};
 
 };

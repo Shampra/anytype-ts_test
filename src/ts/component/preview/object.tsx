@@ -1,7 +1,7 @@
 import React, { forwardRef, useState, useRef, useEffect } from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
-import { Loader, IconObject, Cover, Icon } from 'Component';
+import { Loader, IconObject, Cover, Icon, ObjectName } from 'Component';
 import { I, C, S, U, J, Action, translate } from 'Lib';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 	className?: string;
 	onMore? (e: any): void;
 	onClick? (e: any): void;
+	onContextMenu? (e: any): void;
 	onMouseEnter? (e: any): void;
 	onMouseLeave? (e: any): void;
 	position?: () => void;
@@ -17,12 +18,14 @@ interface Props {
 };
 
 const Colors = [ 'yellow', 'red', 'ice', 'lime' ];
+const TRACE_ID = 'preview';
 
 const PreviewObject = observer(forwardRef<{}, Props>(({
 	rootId = '',
 	size = I.PreviewSize.Small,
 	className = '',
 	onClick,
+	onContextMenu,
 	onMore,
 	onMouseEnter,
 	onMouseLeave,
@@ -303,12 +306,12 @@ const PreviewObject = observer(forwardRef<{}, Props>(({
 		idRef.current = rootId;
 		setIsLoading(true);
 
-		C.ObjectShow(rootId, 'preview', U.Router.getRouteSpaceId(), () => {
-			setIsLoading(false);
-
+		C.ObjectShow(rootId, TRACE_ID, U.Router.getRouteSpaceId(), () => {
 			if (setObject) {
 				setObject(S.Detail.get(contextId, rootId, []));
 			};
+
+			setIsLoading(false);
 		});
 	};
 
@@ -324,7 +327,7 @@ const PreviewObject = observer(forwardRef<{}, Props>(({
 	};
 
 	const getRootId = () => {
-		return [ rootId, 'preview' ].join('-');
+		return [ rootId, TRACE_ID ].join('-');
 	};
 
 	const update = () => {
@@ -340,6 +343,8 @@ const PreviewObject = observer(forwardRef<{}, Props>(({
 	const isTask = U.Object.isTaskLayout(object.layout);
 	const isBookmark = U.Object.isBookmarkLayout(object.layou);
 	const cn = [ 'previewObject' , check.className, className ];
+	const withName = !U.Object.isNoteLayout(object.layout);
+	const withIcon = check.withIcon || isTask || isBookmark;
 
 	switch (size) {
 		case I.PreviewSize.Large: {
@@ -409,9 +414,9 @@ const PreviewObject = observer(forwardRef<{}, Props>(({
 						</div>
 					) : ''}
 
-					<div onClick={onClick}>
+					<div onClick={onClick} onContextMenu={onContextMenu}>
 						<div className="scroller">
-							{object.templateIsBundled ? <Icon className="logo" tooltip={translate('previewObjectTemplateIsBundled')} /> : ''}
+							{object.templateIsBundled ? <Icon className="logo" tooltipParam={{ text: translate('previewObjectTemplateIsBundled') }} /> : ''}
 
 							{(coverType != I.CoverType.None) && coverId ? (
 								<Cover 
@@ -427,8 +432,8 @@ const PreviewObject = observer(forwardRef<{}, Props>(({
 							) : ''}
 
 							<div className="heading">
-								<IconObject size={iconSize} object={object} />
-								<div className="name">{name}</div>
+								{withIcon ? <IconObject size={iconSize} object={object} /> : ''}
+								{withName ? <ObjectName object={object} /> : ''}
 								<div className="featured" />
 							</div>
 

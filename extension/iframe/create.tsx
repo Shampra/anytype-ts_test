@@ -90,7 +90,7 @@ const Create = observer(class Create extends React.Component<I.PageComponent, St
 	};
 
 	componentDidMount (): void {
-		U.Data.createAllSubscriptions(() => this.init());
+		U.Subscription.createAll(() => this.init());
 	};
 
 	componentDidUpdate (): void {
@@ -153,7 +153,7 @@ const Create = observer(class Create extends React.Component<I.PageComponent, St
 		const node = $(this.node);
 		const filters: I.Filter[] = [
 			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts() },
-			{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template },
+			{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template ] }
 		];
 
 		S.Menu.open('searchObject', {
@@ -173,7 +173,7 @@ const Create = observer(class Create extends React.Component<I.PageComponent, St
 
 	onSpaceChange (id: string): void {
 		S.Common.spaceSet(id);
-		U.Data.createAllSubscriptions();
+		U.Subscription.createAll();
 	};
 
 	getWrapperWidth () {

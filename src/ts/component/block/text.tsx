@@ -4,7 +4,7 @@ import $ from 'jquery';
 import raf from 'raf';
 import { observer, } from 'mobx-react';
 import { Select, Marker, IconObject, Icon, Editable } from 'Component';
-import { I, C, S, U, J, keyboard, Key, Preview, Mark, focus, Storage, translate, analytics, Action } from 'Lib';
+import { I, C, S, U, J, keyboard, Preview, Mark, focus, Storage, translate, analytics } from 'Lib';
 
 interface Props extends I.BlockComponent {
 	onToggle?(e: any): void;
@@ -294,7 +294,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 			this.frame = raf(() => {
 				renderMentions(rootId, this.node, this.marks, () => this.getValue());
 				renderObjects(rootId, this.node, this.marks, () => this.getValue(), this.props);
-				renderLinks(this.node, this.marks, () => this.getValue(), this.props);
+				renderLinks(rootId, this.node, this.marks, () => this.getValue(), this.props);
 				renderEmoji(this.node);
 			});
 		};
@@ -373,7 +373,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		let value = this.getValue();
 		let ret = false;
 
-		const symbolBefore = range ? value[range.from - 1] : '';
+		const oneSymbolBefore = range ? value[range.from - 1] : '';
 		const cmd = keyboard.cmdKey();
 
 		const menuOpen = S.Menu.isOpen('', '', [ 'onboarding' ]);
@@ -381,32 +381,32 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		const menuOpenMention = S.Menu.isOpen('blockMention');
 		const menuOpenSmile = S.Menu.isOpen('smile');
 		const saveKeys: any[] = [
-			{ key: keyboard.getKeysString('moveSelectionUp'), preventDefault: true },
-			{ key: keyboard.getKeysString('moveSelectionDown'), preventDefault: true },
-			{ key: keyboard.getKeysString('relation') },
-			{ key: keyboard.getKeysString('duplicate'), preventDefault: true },
-			{ key: keyboard.getKeysString('selectAll'), preventDefault: true },
-			{ key: keyboard.getKeysString('back') },
-			{ key: keyboard.getKeysString('forward') },
-			{ key: keyboard.getKeysString('zoomIn') },
-			{ key: keyboard.getKeysString('zoomOut') },
-			{ key: keyboard.getKeysString('zoomReset') },
-			{ key: keyboard.getKeysString('turnBlock0') },
-			{ key: keyboard.getKeysString('turnBlock1') },
-			{ key: keyboard.getKeysString('turnBlock2') },
-			{ key: keyboard.getKeysString('turnBlock3') },
-			{ key: keyboard.getKeysString('turnBlock4') },
-			{ key: keyboard.getKeysString('turnBlock5') },
-			{ key: keyboard.getKeysString('turnBlock6') },
-			{ key: keyboard.getKeysString('turnBlock7') },
-			{ key: keyboard.getKeysString('turnBlock8') },
-			{ key: keyboard.getKeysString('turnBlock9') },
-			{ key: keyboard.getKeysString('undo'), preventDefault: true },
-			{ key: keyboard.getKeysString('redo'), preventDefault: true },
-			{ key: keyboard.getKeysString('menuAction') },
-			{ key: keyboard.getKeysString('indent'), preventDefault: true },
-			{ key: keyboard.getKeysString('outdent'), preventDefault: true },
-			{ key: keyboard.getKeysString('pageLock') },
+			{ key: 'moveSelectionUp', preventDefault: true },
+			{ key: 'moveSelectionDown', preventDefault: true },
+			{ key: 'relation' },
+			{ key: 'duplicate', preventDefault: true },
+			{ key: 'selectAll', preventDefault: true },
+			{ key: 'back' },
+			{ key: 'forward' },
+			{ key: 'zoomIn' },
+			{ key: 'zoomOut' },
+			{ key: 'zoomReset' },
+			{ key: 'turnBlock0' },
+			{ key: 'turnBlock1' },
+			{ key: 'turnBlock2' },
+			{ key: 'turnBlock3' },
+			{ key: 'turnBlock4' },
+			{ key: 'turnBlock5' },
+			{ key: 'turnBlock6' },
+			{ key: 'turnBlock7' },
+			{ key: 'turnBlock8' },
+			{ key: 'turnBlock9' },
+			{ key: 'undo', preventDefault: true },
+			{ key: 'redo', preventDefault: true },
+			{ key: 'menuAction' },
+			{ key: 'indent', preventDefault: true },
+			{ key: 'outdent', preventDefault: true },
+			{ key: 'pageLock' },
 			{ key: `${cmd}+shift+arrowleft` },
 			{ key: `${cmd}+shift+arrowright` },
 			{ key: `${cmd}+c`, preventDefault: true },
@@ -508,7 +508,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 			});
 		});
 
-		keyboard.shortcut('tab', e, () => {
+		keyboard.shortcut('indent', e, () => {
 			e.preventDefault();
 
 			if (block.isTextCode()) {
@@ -555,11 +555,11 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 				ret = true;
 			};
 
-			if (menuOpenAdd && (symbolBefore == '/')) {
+			if (menuOpenAdd && (oneSymbolBefore == '/')) {
 				S.Menu.close('blockAdd');
 			};
 
-			if (menuOpenMention && (symbolBefore == '@')) {
+			if (menuOpenMention && ((oneSymbolBefore == '@') || (oneSymbolBefore == '['))) {
 				S.Menu.close('blockMention');
 			};
 		});
@@ -658,7 +658,6 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 		const menuOpenAdd = S.Menu.isOpen('blockAdd');
 		const menuOpenMention = S.Menu.isOpen('blockMention');
-		const menuOpenLink = S.Menu.isOpen('searchObject', 'link');
 		const oneSymbolBefore = range ? value[range.from - 1] : '';
 		const twoSymbolBefore = range ? value[range.from - 2] : '';
 		const isRtl = U.Common.checkRtl(value);
@@ -675,7 +674,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 		const canOpenMenuAdd = !menuOpenAdd && (oneSymbolBefore == '/') && isAllowedMenu;
 		const canOpenMenuMention = !menuOpenMention && (oneSymbolBefore == '@') && isAllowedMenu;
-		const canOpenMenuLink = !menuOpenLink && (oneSymbolBefore == '[') && (twoSymbolBefore == '[') && isAllowedMenu;
+		const canOpenMenuLink = !menuOpenMention && (oneSymbolBefore == '[') && (twoSymbolBefore == '[') && isAllowedMenu;
 
 		this.preventMenu = false;
 
@@ -715,13 +714,13 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 		// Open mention menu
 		if (canOpenMenuMention) {
-			U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => this.onMention());
+			U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => this.onMention(1));
 			return;
 		};
 
 		// Open link menu
 		if (canOpenMenuLink) {
-			U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => this.onLink());
+			U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => this.onMention(2));
 			return;
 		};
 
@@ -738,7 +737,12 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 					continue;
 				};
 
-				const reg = new RegExp(`^(${k}\\s)`);
+				let space = '\\s';
+				if (newStyle == I.TextStyle.Code) {
+					space = '';
+				};
+
+				const reg = new RegExp(`^(${k}${space})`);
 				const match = value.match(reg);
 
 				if (!match) {
@@ -766,9 +770,11 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 						S.Block.toggle(rootId, id, true);
 					};
 
-					if ((newStyle == I.TextStyle.Code) && match[2]) {
+					if (newStyle == I.TextStyle.Code) {
+						const lang = match[2] || Storage.get('codeLang') || J.Constant.default.codeLang;
+
 						C.BlockListSetFields(rootId, [ 
-							{ blockId: block.id, fields: { ...block.fields, lang: match[2] } } 
+							{ blockId: block.id, fields: { ...block.fields, lang } } 
 						]);
 					};
 				});
@@ -832,7 +838,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		onKeyUp(e, value, this.marks, range, this.props);
 	};
 
-	onMention () {
+	onMention (d: number) {
 		const range = this.getRange();
 
 		if (!range) {
@@ -844,9 +850,9 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		const element = $(`#block-${block.id}`);
 
 		let value = this.getValue();
-		value = U.Common.stringCut(value, range.from - 1, range.from);
+		value = U.Common.stringCut(value, range.from - d, range.from);
 
-		S.Common.filterSet(range.from - 1, '');
+		S.Common.filterSet(range.from - d, '');
 
 		raf(() => {
 			S.Menu.open('blockMention', {
@@ -871,9 +877,6 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 						value = U.Common.stringInsert(value, text, from, from);
 
 						U.Data.blockSetText(rootId, block.id, value, marks, true, () => {
-							focus.set(block.id, { from: to, to: to });
-							focus.apply();
-
 							// Try to fix async detailsUpdate event
 							window.setTimeout(() => {
 								focus.set(block.id, { from: to, to });
@@ -930,48 +933,6 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		});
 	};
 
-	onLink () {
-		const { rootId, block } = this.props;
-		const win = $(window);
-		const range = this.getRange();
-		const from = range.from - 2;
-		
-		let value = this.getValue();
-		value = U.Common.stringCut(value, range.from - 2, range.from);
-
-		const position = value.length ? I.BlockPosition.Bottom : I.BlockPosition.Replace;
-
-		S.Menu.open('searchObject', {
-			menuKey: 'link',
-			element: `#block-${block.id}`,
-			recalcRect: () => {
-				const rect = U.Common.getSelectionRect();
-				return rect ? { ...rect, y: rect.y + win.scrollTop() } : null;
-			},
-			offsetX: () => {
-				const rect = U.Common.getSelectionRect();
-				return rect ? 0 : J.Size.blockMenu;
-			},
-			data: {
-				rootId,
-				blockId: block.id,
-				canAdd: true,
-				type: I.NavigationType.Link,
-				position,
-				onSelect: () => {
-					if (position == I.BlockPosition.Bottom) {
-						U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => {
-							window.setTimeout(() => {
-								focus.set(block.id, { from, to: from });
-								focus.apply();
-							}, 15);
-						});
-					};
-				},
-			},
-		});
-	};
-	
 	setText (marks: I.Mark[], update: boolean, callBack?: () => void) {
 		const { rootId, block } = this.props;
 		const { content } = block;
@@ -1128,23 +1089,20 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 			return;
 		};
 
-		keyboard.setFocus(true);
-
 		const currentFrom = focus.state.range.from;
 		const currentTo = focus.state.range.to;
-
-		window.clearTimeout(this.timeoutContext);
+		const win = $(window);
+		const el = $(`#block-${block.id}`);
 
 		if (!currentTo || (currentFrom == currentTo) || !block.canHaveMarks() || ids.length) {
-			if (!keyboard.isContextCloseDisabled) {
+			if (S.Menu.isOpen('blockContext') && !keyboard.isContextCloseDisabled) {
 				S.Menu.close('blockContext');
 			};
 			return;
 		};
 
-		const win = $(window);
-		const el = $('#block-' + block.id);
-
+		keyboard.setFocus(true);
+		window.clearTimeout(this.timeoutContext);
 		S.Menu.closeAll([ 'blockAdd', 'blockMention' ]);
 
 		this.timeoutContext = window.setTimeout(() => {
@@ -1183,9 +1141,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 					vertical: I.MenuDirection.Bottom,
 					horizontal: I.MenuDirection.Center,
 					passThrough: true,
-					onClose: () => {
-						keyboard.disableContextClose(false);
-					},
+					onClose: () => keyboard.disableContextClose(false),
 					data: {
 						blockId: block.id,
 						blockIds: [ block.id ],
@@ -1213,20 +1169,25 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		const { block } = this.props;
 		const selection = S.Common.getRef('selectionProvider');
 
+		if (!selection) {
+			return;
+		};
+
 		window.clearTimeout(this.timeoutClick);
 
 		this.clicks++;
-		if (selection && (this.clicks == 3)) {
+		if (this.clicks == 3) {
 			e.preventDefault();
 			e.stopPropagation();
 
 			S.Menu.closeAll([ 'blockContext' ], () => {
 				this.clicks = 0;
+				//this.refEditable?.setRange({ from: 0, to: block.getLength() });
 
 				focus.set(block.id, { from: 0, to: block.getLength() });
 				focus.apply();
 
-				this.onSelect();
+				//this.onSelect();
 			});
 		};
 	};

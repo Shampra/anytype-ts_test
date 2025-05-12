@@ -172,6 +172,10 @@ class Keyboard {
 						S.Popup.close(last.id);
 					};
 				};
+			} else 
+			if (this.isMainSettings() && !this.isFocused) {
+				sidebar.leftPanelSetState({ page: 'widget' });
+				U.Space.openDashboard();
 			};
 			
 			Preview.previewHide(false);
@@ -228,7 +232,7 @@ class Keyboard {
 
 			// Settings
 			this.shortcut('settings', e, () => {
-				U.Object.openAuto({ id: 'account', layout: I.ObjectLayout.Settings });
+				U.Object.openRoute({ id: 'account', layout: I.ObjectLayout.Settings });
 			});
 
 			// Relation panel
@@ -333,6 +337,7 @@ class Keyboard {
 			};
 		} else {
 			const history = U.Router.history;
+			const current = U.Router.getParam(history.location.pathname);
 
 			let prev = history.entries[history.index - 1];
 
@@ -350,6 +355,10 @@ class Keyboard {
 						U.Router.go(prev.pathname, {});
 					};
 					return;
+				};
+
+				if ((current.page == 'main') && (current.action == 'settings') && ([ 'index', 'account', 'spaceIndex', 'spaceShare' ].includes(current.id))) {
+					sidebar.leftPanelSetState({ page: 'widget' });
 				};
 
 				history.goBack();
@@ -439,6 +448,8 @@ class Keyboard {
 		const logPath = electron.logPath();
 		const tmpPath = electron.tmpPath();
 		const route = analytics.route.menuSystem;
+		const isMainChat = this.isMainChat();
+		const canUndo = !this.isFocused && this.isMainEditor();
 
 		switch (cmd) {
 			case 'search': {
@@ -448,6 +459,7 @@ class Keyboard {
 
 			case 'shortcut': {
 				this.onShortcut();
+				analytics.event('MenuHelpShortcut', { route: analytics.route.shortcut });
 				break;
 			};
 
@@ -476,15 +488,19 @@ class Keyboard {
 			};
 
 			case 'undo': {
-				if (!this.isFocused) {
+				if (canUndo) {
 					this.onUndo(rootId, route);
+				} else {
+					document.execCommand('undo');
 				};
 				break;
 			};
 
 			case 'redo': {
-				if (!this.isFocused) {
+				if (canUndo) {
 					this.onRedo(rootId, route);
+				} else {
+					document.execCommand('redo');
 				};
 				break;
 			};
@@ -639,6 +655,7 @@ class Keyboard {
 
 			case 'resetOnboarding': {
 				Storage.delete('onboarding');
+				Storage.delete('primitivesOnboarding');
 				break;
 			};
 
@@ -677,7 +694,6 @@ class Keyboard {
 						className: 'isLeft',
 						data: {
 							icon: 'warning',
-							bgColor: 'red',
 							title: translate('commonWarning'),
 							text: translate('popupConfirmReleaseChannelText'),
 							onConfirm: () => cb(),
@@ -734,6 +750,7 @@ class Keyboard {
 					[ translate('libKeyboardAccountId'), account.id ],
 					[ translate('libKeyboardAnalyticsId'), account.info.analyticsId ],
 					[ translate('libKeyboardDeviceId'), account.info.deviceId ],
+					[ translate('popupSettingsEthereumIdentityTitle'), account.info.ethereumAddress ],
 				]);
 			};
 
@@ -954,7 +971,7 @@ class Keyboard {
 
 	getRootId (isPopup?: boolean): string {
 		const match = this.getMatch(isPopup);
-		return match.params?.objectId || match.params?.id;
+		return match.params.objectId || match.params.id;
 	};
 
 	getPopupMatch () {
@@ -963,7 +980,7 @@ class Keyboard {
 	};
 
 	getMatch (isPopup?: boolean) {
-		const popup = undefined == isPopup ? this.isPopup() : isPopup;
+		const popup = undefined === isPopup ? this.isPopup() : isPopup;
 
 		let ret: any = { params: {} };
 		if (popup) {
@@ -1013,6 +1030,10 @@ class Keyboard {
 
 	isMainType () {
 		return this.isMain() && (this.match?.params?.action == 'type');
+	};
+
+	isMainSettings () {
+		return this.isMain() && (this.match?.params?.action == 'settings');
 	};
 
 	isAuth () {
@@ -1169,21 +1190,29 @@ class Keyboard {
 	};
 
 	getMarkParam () {
-		const cmd = this.cmdKey();
 		return [
-			{ key: `${cmd}+b`,		 type: I.MarkType.Bold,		 param: '' },
-			{ key: `${cmd}+i`,		 type: I.MarkType.Italic,	 param: '' },
-			{ key: `${cmd}+u`,		 type: I.MarkType.Underline, param: '' },
-			{ key: `${cmd}+shift+s`, type: I.MarkType.Strike,	 param: '' },
-			{ key: `${cmd}+k`,		 type: I.MarkType.Link,		 param: '' },
-			{ key: `${cmd}+l`,		 type: I.MarkType.Code,		 param: '' },
-			{ key: `${cmd}+shift+h`, type: I.MarkType.BgColor,	 param: Storage.get('bgColor') },
-			{ key: `${cmd}+shift+c`, type: I.MarkType.Color,	 param: Storage.get('color') },
+			{ key: 'textBold',		 type: I.MarkType.Bold,		 param: '' },
+			{ key: 'textItalic',	 type: I.MarkType.Italic,	 param: '' },
+			{ key: 'textUnderlined', type: I.MarkType.Underline, param: '' },
+			{ key: 'textStrike',	 type: I.MarkType.Strike,	 param: '' },
+			{ key: 'textLink',		 type: I.MarkType.Link,		 param: '' },
+			{ key: 'textCode',		 type: I.MarkType.Code,		 param: '' },
+			{ key: 'textColor',		 type: I.MarkType.Color,	 param: Storage.get('color') },
+			{ key: 'textBackground', type: I.MarkType.BgColor,	 param: Storage.get('bgColor') },
 		];
 	};
 	
-	isSpecial (e: any): boolean {
-		return this.isArrow(e) || [ Key.escape, Key.backspace, Key.tab, Key.enter, Key.shift, Key.ctrl, Key.alt, Key.meta ].includes(this.eventKey(e));
+	isSpecial(e: any): boolean {
+		const fk = Array.from({ length: 12 }, (_, i) => `F${i + 1}`);
+		const sk = new Set([
+			Key.escape, Key.backspace, Key.delete, Key.tab, Key.enter, Key.shift, Key.ctrl, Key.alt, Key.meta,
+			Key.left, Key.up, Key.right, Key.down,
+			'PageUp', 'PageDown', 'Home', 'End', 'Insert', 'CapsLock', 
+			'NumLock', 'ScrollLock', 'Pause', 'PrintScreen', 'ContextMenu', 'Dead',
+			...fk,
+		].map(it => it.toLowerCase()));
+		
+		return sk.has(this.eventKey(e));
 	};
 
 	isArrow (e: any): boolean {
@@ -1201,10 +1230,10 @@ class Keyboard {
 	metaKeys (e: any): string[] {
 		const ret = [];
 		if (e.shiftKey) {
-			ret.push('shift');
+			ret.push(Key.shift);
 		};
 		if (e.altKey) {
-			ret.push('alt');
+			ret.push(Key.alt);
 		};
 		if (e.ctrlKey) {
 			ret.push('ctrl');
@@ -1220,13 +1249,7 @@ class Keyboard {
 			return;
 		};
 
-		const string = this.shortcuts[s] ? (this.shortcuts[s].keys || []).join('+') : s;
-		if (!string) {
-			console.log('[keyboard.shortcut] Empty string', s);
-			return;
-		};
-
-		const a = string.split(',').map(it => it.trim());
+		const a = s.split(',').map(it => it.trim());
 		const key = this.eventKey(e);
 		const which = e.which;
 		const metaKeys = this.metaKeys(e);
@@ -1244,7 +1267,15 @@ class Keyboard {
 		};
 
 		for (const item of a) {
-			const keys = item.split('+').sort();
+			let keys = [];
+
+			if (this.shortcuts[item]) {
+				keys = this.shortcuts[item].keys || [];
+			} else {
+				keys = item.split('+');
+			};
+
+			keys.sort();
 			
 			for (const k of keys) {
 				if (which == J.Key[k]) {
@@ -1255,11 +1286,10 @@ class Keyboard {
 				};
 			};
 
-			const ks = keys.join('+');
 			const check = U.Common.arrayUnique(pressed).sort().join('+');
 
-			if (check == ks) {
-				res = ks;
+			if (check == keys.join('+')) {
+				res = check;
 			};
 		};
 
@@ -1280,10 +1310,6 @@ class Keyboard {
 		return this.shortcuts[id].keys || [];
 	};
 
-	getKeysString (id: string) {
-		return this.getKeys(id).join('+');
-	};
-
 	getSymbolsFromKeys (keys: string[]) {
 		const isMac = U.Common.isPlatformMac();
 
@@ -1291,32 +1317,35 @@ class Keyboard {
 			if (key === this.cmdKey()) {
 				return this.cmdSymbol();
 			};
-			if (key == 'shift') {
+			if (key == Key.shift) {
 				return this.shiftSymbol();
 			};
-			if (key == 'alt') {
+			if (key == Key.alt) {
 				return this.altSymbol();
 			};
 			if ((key == 'ctrl') && isMac) {
 				return '&#8963;';
 			};
-			if (key == 'enter') {
+			if (key == Key.enter) {
 				return '&#8629;';
 			};
-			if (key == 'delete') {
+			if (key == Key.delete) {
 				return 'Del';
 			};
-			if (key == 'arrowleft') {
+			if (key == Key.left) {
 				return '←';
 			};
-			if (key == 'arrowup') {
+			if (key == Key.up) {
 				return '↑';
 			};
-			if (key == 'arrowright') {
+			if (key == Key.right) {
 				return '→';
 			};
-			if (key == 'arrowdown') {
+			if (key == Key.down) {
 				return '↓';
+			};
+			if (key == 'comma') {
+				return ',';
 			};
 			return U.Common.ucFirst(key);
 		});
@@ -1342,6 +1371,7 @@ class Keyboard {
 
 export enum Key {
 	backspace	 = 'backspace',
+	delete		 = 'delete',
 	tab			 = 'tab',
 	enter		 = 'enter',
 	shift		 = 'shift',

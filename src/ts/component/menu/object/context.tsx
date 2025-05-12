@@ -127,7 +127,11 @@ class MenuContext extends React.Component<I.Menu> {
 			if (!S.Block.isAllowed(object.restrictions, [ I.RestrictionObject.Details ])) {
 				allowedRelation = false;
 			};
-			if (U.Object.isTypeOrRelationLayout(object.layout)) {
+			if (U.Object.isTypeLayout(object.layout)) {
+				allowedRelation = false;
+				allowedCopy	= false;
+			};
+			if (U.Object.isRelationLayout(object.layout)) {
 				allowedRelation = false;
 				allowedWidget = false;
 				allowedLinkTo = false;
@@ -258,6 +262,7 @@ class MenuContext extends React.Component<I.Menu> {
 			case 'changeType': {
 				menuId = 'typeSuggest';
 				menuParam.data = Object.assign(menuParam.data, {
+					canAdd: true,
 					filter: '',
 					filters: [
 						{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts() },
@@ -306,6 +311,7 @@ class MenuContext extends React.Component<I.Menu> {
 				menuParam.data = Object.assign(menuParam.data, {
 					filters: [
 						{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: I.ObjectLayout.Collection },
+						{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template ] },
 						{ relationKey: 'isReadonly', condition: I.FilterCondition.NotEqual, value: true },
 					],
 					rootId: itemId,

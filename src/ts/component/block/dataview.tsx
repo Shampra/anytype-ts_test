@@ -21,15 +21,8 @@ interface Props extends I.BlockComponent {
 	isInline?: boolean;
 };
 
-interface State {
-	loading: boolean;
-};
+const BlockDataview = observer(class BlockDataview extends React.Component<Props> {
 
-const BlockDataview = observer(class BlockDataview extends React.Component<Props, State> {
-
-	state = {
-		loading: false,
-	};
 	node = null;
 	refView = null;
 	refControls = null;
@@ -61,6 +54,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		this.getTarget = this.getTarget.bind(this);
 		this.getTypeId = this.getTypeId.bind(this);
 		this.getDefaultTemplateId = this.getDefaultTemplateId.bind(this);
+		this.getSubId = this.getSubId.bind(this);
 		this.onRecordAdd = this.onRecordAdd.bind(this);
 		this.onCellClick = this.onCellClick.bind(this);
 		this.onCellChange = this.onCellChange.bind(this);
@@ -94,7 +88,6 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 	render () {
 		const { rootId, block, isPopup, isInline, readonly } = this.props;
-		const { loading } = this.state;
 		const views = S.Record.getViews(rootId, block.id);
 
 		if (!views.length) {
@@ -166,6 +159,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			getTypeId: this.getTypeId,
 			getTemplateId: this.getDefaultTemplateId,
 			getEmpty: this.getEmpty,
+			getSubId: this.getSubId,
 			onRecordAdd: this.onRecordAdd,
 			onTemplateMenu: this.onTemplateMenu,
 			onTemplateAdd: this.onTemplateAdd,
@@ -184,9 +178,6 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			canCellEdit: this.canCellEdit,
 		};
 
-		if (loading) {
-			body = null;
-		} else
 		if (isInline && !targetId) {
 			body = this.getEmpty('target');
 		} else
@@ -250,6 +241,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		const subId = this.getSubId();
 		const isCollection = this.isCollection();
 		const viewId = match.params.viewId || block.content.viewId;
+		const object = this.getTarget();
 
 		if (viewId) {
 			S.Record.metaSet(subId, '', { viewId });
@@ -264,9 +256,6 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			const isCompletedSets = Onboarding.isCompleted('sets');
 
 			window.setTimeout(() => {
-				if (!isCollection && !isCompletedSets) {
-					Onboarding.start('sets', isPopup);
-				} else 
 				if (isCollection && !total) {
 					Onboarding.start('collections', isPopup);
 				} else 
@@ -285,10 +274,12 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		this.resize();
 		this.rebind();
 
-		const view = this.getView();
-		const eventName = this.isCollection() ? 'ScreenCollection' : 'ScreenSet';
+		if (!U.Object.isTypeLayout(object.layout)) {
+			const view = this.getView();
+			const eventName = this.isCollection() ? 'ScreenCollection' : 'ScreenSet';
 
-		analytics.event(eventName, { embedType: analytics.embedType(isInline), type: view?.type });
+			analytics.event(eventName, { embedType: analytics.embedType(isInline), type: view?.type });
+		};
 	};
 
 	componentDidUpdate () {
@@ -388,10 +379,6 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			return;
 		};
 
-		if (clear) {
-			S.Record.recordsSet(subId, '', []);
-		};
-
 		S.Record.metaSet(subId, '', { offset, viewId });
 
 		if (view.type == I.ViewType.Board) {
@@ -408,10 +395,6 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				this.viewId = '';
 			};
 		} else {
-			if (clear) {
-				this.setState({ loading: true });
-			};
-
 			const filters = [];
 
 			if (this.searchIds) {
@@ -420,6 +403,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 			Dataview.getData({
 				rootId, 
+				subId,
 				blockId: block.id, 
 				newViewId: viewId, 
 				keys, 
@@ -429,15 +413,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				sources,
 				filters,
 				collectionId: (isCollection ? this.getObjectId() : ''),
-			}, (message: any) => {
-				if (clear) {
-					this.setState({ loading: false });
-				};
-
-				if (callBack) {
-					callBack(message);
-				};
-			});
+			}, callBack);
 		};
 	};
 
@@ -455,8 +431,14 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 	};
 
 	getObjectId (): string {
-		const { rootId, block } = this.props;
-		return block.getTargetObjectId() || rootId;
+		const { rootId, block, isInline } = this.props;
+
+		let ret = block.getTargetObjectId();
+		if (!isInline && !ret) {
+			ret = rootId;
+		};
+
+		return ret;
 	};
 
 	getKeys (id: string): string[] {
@@ -505,7 +487,13 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 	getSubId (groupId?: string): string {
 		const { rootId, block } = this.props;
 
-		return groupId ? S.Record.getGroupSubId(rootId, block.id, groupId) : S.Record.getSubId(rootId, block.id);
+		let ret = '';
+		if (groupId) {
+			ret = S.Record.getGroupSubId(rootId, block.id, groupId);
+		} else {
+			ret = S.Record.getSubId(rootId, block.id);
+		};
+		return ret;
 	};
 
 	getRecords (groupId?: string): string[] {
@@ -717,7 +705,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				U.Object.openConfig(object);
 			} else {
 				if (U.Object.isNoteLayout(object.layout)) {
-					this.onCellClick(e, 'name', object.id);
+					this.onCellClick(e, 'name', object.id, object);
 				} else {
 					window.setTimeout(() => {
 						const id = Relation.cellId(this.getIdPrefix(), 'name', object.id);
@@ -824,9 +812,9 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				this.refControls?.toggleHoverArea(false);
 			},
 			data: {
-				rootId,
 				blockId: block.id,
 				subId: this.getSubId(),
+				targetId: this.getObjectId(),
 				hasSources,
 				getView: this.getView,
 				withTypeSelect: this.isAllowedDefaultType(),
@@ -843,8 +831,8 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 						analytics.event('DefaultTypeChange', { route });
 					};
 				},
-				onSetDefault: (item) => {
-					Dataview.viewUpdate(rootId, block.id, view.id, { defaultTemplateId: item.id });
+				onSetDefault: id => {
+					Dataview.viewUpdate(rootId, block.id, view.id, { defaultTemplateId: id });
 				},
 				onSelect: (item: any) => {
 					if (!view) {
@@ -854,7 +842,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 					const typeId = this.getTypeId();
 					const type = S.Record.getTypeById(typeId);
 
-					if (type && (type.uniqueKey == J.Constant.typeKey.bookmark)) {
+					if (U.Object.isBookmarkLayout(type.recommendedLayout)) {
 						menuContext?.close();
 						this.onBookmarkMenu(e, dir, '', { element: `#button-${block.id}-add-record` });
 					} else
@@ -867,7 +855,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 						menuContext?.close();
 						analytics.event('ChangeDefaultTemplate', { route });
 					};
-				}
+				},
 			}
 		});
 	};
@@ -938,7 +926,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 			if (keyboard.withCommand(e)) {
 				if (!ids.length) {
-					U.Object.openEvent(e, record);
+					U.Object.openPopup(record);
 				};
 			} else {
 				U.Object.openConfig(record);
@@ -970,13 +958,14 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		};
 	};
 
-	onContext (e: any, id: string): void {
+	onContext (e: any, id: string, subId?: string): void {
 		e.preventDefault();
 		e.stopPropagation();
 
+		subId = subId || this.getSubId();
+
 		const { block } = this.props;
 		const selection = S.Common.getRef('selectionProvider');
-		const subId = this.getSubId();
 		const isCollection = this.isCollection();
 		const view = this.getView();
 
@@ -1032,7 +1021,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			};
 		} else {
 			filters = filters.concat([
-				{ relationKey: 'resolvedLayout', condition: I.FilterCondition.Equal, value: I.ObjectLayout.Set },
+				{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: [ I.ObjectLayout.Set, I.ObjectLayout.Type ] },
 				{ relationKey: 'setOf', condition: I.FilterCondition.NotEmpty, value: null },
 			]);
 
@@ -1089,6 +1078,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				filters,
 				addParam,
 				onSelect,
+				withPlural: true,
 			}
 		}, param || {}));
 	};
@@ -1102,12 +1092,8 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			S.Menu.open('dataviewSource', {
 				element,
 				horizontal: I.MenuDirection.Center,
-				onOpen: () => { 
-					element.addClass('active');
-				}, 
-				onClose: () => {
-					element.removeClass('active');
-				}, 
+				onOpen: () => element.addClass('active'), 
+				onClose: () => element.removeClass('active'), 
 				data: {
 					rootId,
 					objectId,
@@ -1220,8 +1206,9 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 	};
 
 	getEmpty (type: string) {
-		const { isInline, block } = this.props;
+		const { isInline, block, readonly } = this.props;
 		const isCollection = this.isCollection();
+		const view = this.getView();
 		const cn = [];
 
 		if (isInline) {
@@ -1253,7 +1240,9 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			};
 
 			case 'view': {
-				cn.push('withHead');
+				if (view.type != I.ViewType.Grid) {
+					cn.push('withHead');
+				};
 
 				emptyProps.title = translate('commonNoObjects');
 
@@ -1271,7 +1260,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				{...this.props}
 				{...emptyProps}
 				className={cn.join(' ')}
-				withButton={emptyProps.button ? true : false}
+				withButton={emptyProps.button && !readonly ? true : false}
 			/>
 		);
 	};
@@ -1424,7 +1413,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			this.filter = v;
 
 			if (v) {
-				U.Data.search({
+				U.Subscription.search({
 					filters: [],
 					sorts: [],
 					fullText: v,

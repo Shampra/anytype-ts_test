@@ -22,6 +22,7 @@
 .button.pink:not(.disabled):hover { background: #e5374b; }
 
 .button.black { background: var(--color-control-accent); color: var(--color-bg-primary); }
+.button.black.disabled { opacity: 1; background-color: var(--color-shape-secondary); }
 .button.black:not(.disabled):hover, .button.black:not(.disabled).hover { background: #41403d; }
 .button.black {
 	.arrow { background-image: url('~img/arrow/button/white.svg'); }
@@ -33,9 +34,9 @@
 
 .button.red { color: var(--color-red); border: solid 1px var(--color-shape-primary); }
 .button.red:not(.disabled):hover,
-.button.red:not(.disabled).hover { background: #fee7e0; border-color: #fcd1c3; }
+.button.red:not(.disabled).hover { background: var(--color-bg-red); border-color: #fcd1c3; }
 
-.button.dark { background: var(--color-shape-transparent-tertiary); color: var(--color-bg-primary); }
+.button.dark { background: var(--color-shape-highlight-light); color: var(--color-bg-primary); }
 .button.dark:not(.disabled):hover,
 .button.dark:not(.disabled).hover { background: rgba(0,0,0,0.4); }
 
@@ -44,6 +45,7 @@
 	&:hover, &.hover, &.active { background: var(--color-shape-highlight-medium); }
 }
 
+.button.c48 { @include text-paragraph; height: 48px; border-radius: 8px; padding: 0px 16px; }
 .button.c36 { @include text-common; height: 36px; border-radius: 6px; padding: 0px 12px; }
 .button.c32 { @include text-small; height: 32px; border-radius: 6px; padding: 0px 10px; }
 .button.c28 { @include text-common; height: 28px; border-radius: 6px; padding: 0px 10px; }

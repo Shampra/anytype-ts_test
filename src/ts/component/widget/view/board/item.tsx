@@ -13,7 +13,7 @@ interface Props extends I.WidgetViewComponent {
 
 const WidgetBoardItem = observer(forwardRef<{}, Props>((props, ref) => {
 
-	const { subId, id, block, isEditing, hideIcon, onContext, getView } = props;
+	const { subId, id, parent, block, isEditing, hideIcon, onContext, getView } = props;
 	const nodeRef = useRef(null);
 	const moreRef = useRef(null);
 	const rootId = keyboard.getRootId();
@@ -34,7 +34,7 @@ const WidgetBoardItem = observer(forwardRef<{}, Props>((props, ref) => {
 		e.stopPropagation();
 
 		U.Object.openEvent(e, object);
-		analytics.event('OpenSidebarObject');
+		analytics.event('OpenSidebarObject', { widgetType: analytics.getWidgetType(parent.content.autoAdded) });
 	};
 
 	const onContextHandler = (e: SyntheticEvent, withElement: boolean) => {
@@ -64,8 +64,8 @@ const WidgetBoardItem = observer(forwardRef<{}, Props>((props, ref) => {
 			<Icon 
 				ref={moreRef} 
 				className="more" 
-				tooltip={translate('widgetOptions')} 
 				onMouseDown={e => onContextHandler(e, true)} 
+				tooltipParam={{ text: translate('widgetOptions') }}
 			/>
 		);
 	};
@@ -76,8 +76,8 @@ const WidgetBoardItem = observer(forwardRef<{}, Props>((props, ref) => {
 				id={iconKey}
 				key={iconKey}
 				object={object} 
-				size={18} 
-				iconSize={18}
+				size={20} 
+				iconSize={20}
 				canEdit={!isReadonly && !isArchived && allowedDetails && U.Object.isTaskLayout(object.layout)} 
 				menuParam={{ 
 					className: 'fixed',
@@ -90,7 +90,7 @@ const WidgetBoardItem = observer(forwardRef<{}, Props>((props, ref) => {
 	let inner = (
 		<div className="inner" onMouseDown={onClick}>
 			{icon}
-			<ObjectName object={object} />
+			<ObjectName object={object} withPlural={true} />
 
 			<div className="buttons">
 				{more}

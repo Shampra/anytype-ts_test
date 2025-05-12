@@ -10,7 +10,7 @@ interface WidgetViewCalendarRefProps {
 const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.WidgetViewComponent>((props, ref: any) => {
 
 	const [ value, setValue ] = useState(U.Date.now());
-	const { rootId, block, canCreate, getView, reload, onCreate } = props;
+	const { rootId, block, canCreate, subId, getView, reload, onCreate } = props;
 	const monthRef = useRef(null);
 	const yearRef = useRef(null);
 	const view = getView();
@@ -24,12 +24,14 @@ const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.Wid
 
 	let { m, y } = getDateParam(value);
 
+	const getElementId = (d: number, m: number, y: number) => [ 'day', block.id, d, m, y ].join('-');
+
 	const onContextMenu = (e: any, item: any) => {
 		e.preventDefault();
 		e.stopPropagation();
 
 		S.Menu.open('select', {
-			element: '#' + [ 'day', item.d, item.m, item.y ].join('-'),
+			element: `#${getElementId(item.d, item.m, item.y)}`,
 			offsetY: 4,
 			noFlipY: true,
 			data: {
@@ -61,7 +63,7 @@ const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.Wid
 	};
 
 	const onClick = (d: number, m: number, y: number) => {
-		const element = `#day-${d}-${m}-${y}`;
+		const element = `#${getElementId(d, m, y)}`;
 
 		S.Menu.closeAll([ 'calendarDay' ], () => {
 			S.Menu.open('calendarDay', {
@@ -129,7 +131,7 @@ const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.Wid
 
 	const getDotMap = (relationKey: string): Map<string, boolean> => {
 		const data = U.Date.getCalendarMonth(value);
-		const items = S.Record.getRecords(S.Record.getSubId(rootId, J.Constant.blockId.dataview), [ relationKey ]);
+		const items = S.Record.getRecords(subId, [ relationKey ]);
 		const ret = new Map();
 
 		data.forEach(it => {
@@ -153,7 +155,6 @@ const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.Wid
 		getFilters,
 	}));
 
-	const today = getDateParam(U.Date.now());
 	const days = U.Date.getWeekDays();
 	const months = U.Date.getMonths();
 	const years = U.Date.getYears(0, 3000);
@@ -202,8 +203,11 @@ const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.Wid
 						if (m != item.m) {
 							cn.push('other');
 						};
-						if ((today.d == item.d) && (today.m == item.m) && (today.y == item.y)) {
+						if (item.isToday) {
 							cn.push('today');
+						};
+						if (item.isWeekend) {
+							cn.push('weekend');
 						};
 						if (i < 7) {
 							cn.push('first');
@@ -212,7 +216,7 @@ const WidgetViewCalendar = observer(forwardRef<WidgetViewCalendarRefProps, I.Wid
 						const check = dotMap.get([ item.d, item.m, item.y ].join('-'));
 						return (
 							<div 
-								id={[ 'day', item.d, item.m, item.y ].join('-')}
+								id={getElementId(item.d, item.m, item.y)}
 								key={i}
 								className={cn.join(' ')} 
 								onClick={() => onClick(item.d, item.m, item.y)}

@@ -105,9 +105,7 @@ export default {
 				'.shareBanner',
 			],
 			/*
-			onClose: () => {
-				Onboarding.start('emailCollection', false);
-			},
+			onClose: () => Onboarding.start('emailCollection', false),
 			*/
 		},
 		items: [
@@ -116,13 +114,6 @@ export default {
 				description: translate('onboardingSpacesText'),
 				param: {
 					element: '#widget-space',
-				}
-			},
-			{
-				category: translate('onboardingAllObjectTitle'),
-				description: translate('onboardingAllObjectText'),
-				param: {
-					element: '#widget-space #item-all',
 				}
 			},
 			{
@@ -216,23 +207,6 @@ export default {
 					offsetX: -295,
 				}
 			},
-		]
-	}),
-
-	sets: () => ({
-		items: [
-			{
-				category: translate('onboardingSetsTitle'),
-				description: translate('onboardingSetsText'),
-				buttonText: translate('onboardingSetsButton'),
-				param: {
-					noArrow: true,
-					element: '#dataviewControlsSideRight',
-					vertical: I.MenuDirection.Bottom,
-					horizontal: I.MenuDirection.Right,
-					offsetY: 14,
-				}
-			}
 		]
 	}),
 
@@ -386,5 +360,51 @@ export default {
 			],
 		};
 	},
+
+	objectDescriptionButton: () => {
+		const controls = '#page.isFull .editorControls';
+		const btn = `${controls} #button-description`;
+
+		if (!$(btn).length) {
+			return;
+		};
+
+		return {
+			items: [
+				{
+					description: translate('onboardingMainObject'),
+					buttonText: translate('commonOk'),
+				}
+			],
+			param: {
+				element: btn,
+				vertical: I.MenuDirection.Bottom,
+				horizontal: I.MenuDirection.Center,
+				passThrough: true,
+				noClose: true,
+				offsetY: 16,
+				onOpen: () => $(controls).addClass('active'),
+				onClose: () => $(controls).removeClass('active'),
+			},
+		};
+	},
+
+	typeResetLayout: () => ({
+		items: [
+			{
+				description: translate('onboardingMainType'),
+				buttonText: translate('commonOk'),
+			}
+		],
+
+		param: {
+			element: '#pageFlex.isFull .headSimple .side.right',
+			vertical: I.MenuDirection.Center,
+			horizontal: I.MenuDirection.Left,
+			noClose: true,
+			offsetX: -304,
+			offsetY: 45,
+		},
+	}),
 
 };

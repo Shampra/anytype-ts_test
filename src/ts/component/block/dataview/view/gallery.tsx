@@ -33,10 +33,10 @@ const ViewGallery = observer(class ViewGallery extends React.Component<I.ViewCom
 	};
 
 	render () {
-		const { rootId, block, isPopup, isInline, className, getView, getKeys, getLimit, getVisibleRelations, onRecordAdd, getEmpty, getRecords } = this.props;
+		const { rootId, block, isPopup, isInline, className, getSubId, getView, getKeys, getLimit, getVisibleRelations, onRecordAdd, getEmpty, getRecords } = this.props;
 		const view = getView();
 		const relations = getVisibleRelations();
-		const subId = S.Record.getSubId(rootId, block.id);
+		const subId = getSubId();
 		const records = getRecords();
 		const { coverRelationKey, cardSize, hideIcon } = view;
 		const { offset, total } = S.Record.getMeta(subId, '');
@@ -169,6 +169,13 @@ const ViewGallery = observer(class ViewGallery extends React.Component<I.ViewCom
 
 	componentDidUpdate (): void {
 		this.reset();
+
+		const selection = S.Common.getRef('selectionProvider');
+		const ids = selection?.get(I.SelectType.Record) || [];
+
+		if (ids.length) {
+			selection?.renderSelection();
+		};
 	};
 
 	componentWillUnmount () {
@@ -181,12 +188,14 @@ const ViewGallery = observer(class ViewGallery extends React.Component<I.ViewCom
 			return;
 		};
 
-		this.setColumnCount();
-		this.cache.clearAll();
+		S.Common.setTimeout('galleryReset', 500, () => {
+			this.setColumnCount();
+			this.cache.clearAll();
 
-		if (this.refList) {
-			this.refList.recomputeRowHeights(0);
-		};
+			if (this.refList) {
+				this.refList.recomputeRowHeights(0);
+			};
+		});
 	};
 
 	setColumnCount () {
@@ -202,8 +211,8 @@ const ViewGallery = observer(class ViewGallery extends React.Component<I.ViewCom
 		let size = 0;
 		switch (view.cardSize) {
 			default:				 size = 224; break;
-			case I.CardSize.Medium:	 size = 284; break;
-			case I.CardSize.Large:	 size = 360; break;
+			case I.CardSize.Medium:	 size = 360; break;
+			case I.CardSize.Large:	 size = 480; break;
 		};
 
 		this.columnCount = Math.max(1, Math.floor((this.width - margin) / size));
@@ -213,12 +222,12 @@ const ViewGallery = observer(class ViewGallery extends React.Component<I.ViewCom
 		this.width = width;
 
 		window.clearTimeout(this.timeout);
-		this.timeout = window.setTimeout(() => this.forceUpdate(), 10);
+		this.timeout = window.setTimeout(() => this.forceUpdate(), 50);
 	};
 
 	loadMoreCards ({ startIndex, stopIndex }) {
-		const { rootId, block, loadData, getView, getLimit } = this.props;
-		const subId = S.Record.getSubId(rootId, block.id);
+		const { rootId, block, loadData, getSubId, getView, getLimit } = this.props;
+		const subId = getSubId();
 		const view = getView();
 
 		let { offset } = S.Record.getMeta(subId, '');
@@ -312,14 +321,14 @@ const ViewGallery = observer(class ViewGallery extends React.Component<I.ViewCom
 	};
 
 	getCoverObject (id: string): any {
-		const { rootId, block, getView, getKeys } = this.props;
+		const { getView, getKeys, getSubId } = this.props;
 		const view = getView();
 
 		if (!view.coverRelationKey) {
 			return null;
 		};
 
-		const subId = S.Record.getSubId(rootId, block.id);
+		const subId = getSubId();
 		const record = S.Detail.get(subId, id, getKeys(view.id));
 
 		return Dataview.getCoverObject(subId, record, view.coverRelationKey);

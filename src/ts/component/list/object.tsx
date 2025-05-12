@@ -58,7 +58,7 @@ const ListObject = observer(forwardRef<ListObjectRefProps, Props>(({
 	};
 
 	const getData = (page: number, callBack?: (message: any) => void) => {
-		const limit = J.Constant.limit.listObject
+		const limit = J.Constant.limit.listObject;
 		const offset = (page - 1) * limit;
 		const fl = [
 			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.excludeFromSet() },
@@ -66,7 +66,7 @@ const ListObject = observer(forwardRef<ListObjectRefProps, Props>(({
 
 		S.Record.metaSet(subId, '', { offset });
 
-		U.Data.searchSubscribe({
+		U.Subscription.subscribe({
 			spaceId,
 			subId,
 			sorts: [ { relationKey: sortId, type: sortType } ],
@@ -102,7 +102,6 @@ const ListObject = observer(forwardRef<ListObjectRefProps, Props>(({
 				relationKeys: getKeys(),
 				allowedLinkTo: true,
 				allowedOpen: true,
-				allowedRelation: true,
 			}
 		});
 	};
@@ -227,8 +226,8 @@ const ListObject = observer(forwardRef<ListObjectRefProps, Props>(({
 		setSortId(columnList[0].relationKey);
 
 		return () => {
-			C.ObjectSearchUnsubscribe([ subId ]);
-		}
+			U.Subscription.destroyList([ subId ]);
+		};
 	}, []);
 
 	useEffect(() => getData(1), [ sortId, sortType ]);

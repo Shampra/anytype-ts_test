@@ -21,7 +21,7 @@ interface SelectionRefProps {
 	hide(): void;
 };
 
-const THRESHOLD = 10;
+const THRESHOLD = 20;
 
 const SelectionProvider = observer(forwardRef<SelectionRefProps, Props>((props, ref) => {
 
@@ -179,7 +179,8 @@ const SelectionProvider = observer(forwardRef<SelectionRefProps, Props>((props, 
 		};
 
 		const isPopup = keyboard.isPopup();
-		const rect = getRect(x.current, y.current, e.pageX, e.pageY);
+		const { x: x1, y: y1 } = recalcCoords(e.pageX, e.pageY);
+		const rect = getRect(x.current, y.current, x1, y1);
 
 		if ((rect.width < THRESHOLD) && (rect.height < THRESHOLD)) {
 			return;
@@ -194,7 +195,7 @@ const SelectionProvider = observer(forwardRef<SelectionRefProps, Props>((props, 
 	};
 
 	const onScroll = (e: any) => {
-		if (!isSelecting.current || !hasMoved.current) {
+		if (!isSelecting.current || !hasMoved.current || keyboard.isSelectionDisabled) {
 			return;
 		};
 
@@ -382,7 +383,7 @@ const SelectionProvider = observer(forwardRef<SelectionRefProps, Props>((props, 
 
 		for (const i in I.SelectType) {
 			const type = I.SelectType[i];
-			
+
 			list[type] = get(type, false);
 
 			nodes.current.filter(it => it.type == type).forEach(item => {
@@ -576,6 +577,10 @@ const SelectionProvider = observer(forwardRef<SelectionRefProps, Props>((props, 
 			for (const i in I.SelectType) {
 				const type = I.SelectType[i];
 				const list = get(type, true);
+
+				if (!list.length) {
+					continue;
+				};
 
 				for (const id of list) {
 					container.find(`#selectionTarget-${id}`).addClass('isSelectionSelected');

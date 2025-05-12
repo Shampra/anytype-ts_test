@@ -1,6 +1,6 @@
 import * as React from 'react';
 import $ from 'jquery';
-import { Icon, PreviewObject } from 'Component';
+import { Icon, PreviewObject, EmptySearch } from 'Component';
 import { I, C, S, U, J, translate, keyboard, sidebar } from 'Lib';
 import { observer } from 'mobx-react';
 
@@ -29,9 +29,11 @@ const MenuTemplateList = observer(class MenuTemplateList extends React.Component
 	render () {
 		const { param, setHover } = this.props;
 		const { data } = param;
+		const { activeId } = data;
 		const previewSize = data.previewSize || I.PreviewSize.Small;
 		const templateId = this.getTemplateId();
 		const items = this.getItems();
+		const canWrite = U.Space.canMyParticipantWrite();
 
 		const ItemAdd = () => (
 			<div className="previewObject small">
@@ -41,25 +43,34 @@ const MenuTemplateList = observer(class MenuTemplateList extends React.Component
 		);
 
 		const Item = (item: any) => {
-			let content = null;
+			const cn = [ 'item' ];
+			const onMore = canWrite ? e => this.onMore(e, item) : null;
 
+			let content = null;
 			if (item.id == J.Constant.templateId.new) {
 				content = <ItemAdd {...item} />;
 			} else {
 				content = (
 					<PreviewObject
-						className={item.id == templateId ? 'isDefault' : ''}
 						rootId={item.id}
 						size={previewSize}
-						onMore={e => this.onMore(e, item)}
+						onMore={onMore}
+						onContextMenu={onMore}
 					/>
 				);
+			};
+
+			if ((item.id == activeId) && activeId) {
+				cn.push('active');
+			};
+			if ((item.id == templateId) && templateId) {
+				cn.push('isDefault');
 			};
 
 			return (
 				<div 
 					id={`item-${item.id}`} 
-					className="item"
+					className={cn.join(' ')}
 					onClick={e => this.onClick(e, item)}
 					onMouseEnter={() => setHover(item)}
 					onMouseLeave={() => setHover(null)}
@@ -71,11 +82,13 @@ const MenuTemplateList = observer(class MenuTemplateList extends React.Component
 
 		return (
 			<div ref={node => this.node = node}>
-				<div className="items">
-					{items.map((item: any, i: number) => (
-						<Item key={i} {...item} />
-					))}
-				</div>
+				{items.length ? (
+					<div className="items">
+						{items.map((item: any, i: number) => (
+							<Item key={i} {...item} />
+						))}
+					</div>
+				) : <EmptySearch className="noItems" text={translate('blockDataviewNoTemplates')} />}
 			</div>
 		);
 	};
@@ -92,7 +105,7 @@ const MenuTemplateList = observer(class MenuTemplateList extends React.Component
 	};
 
 	componentWillUnmount () {
-		C.ObjectSearchUnsubscribe([ this.getSubId() ]);
+		U.Subscription.destroyList([ this.getSubId() ]);
 		this.unbind();
 	};
 
@@ -158,7 +171,7 @@ const MenuTemplateList = observer(class MenuTemplateList extends React.Component
 		];
 		const keys = J.Relation.default.concat([ 'targetObjectType' ]);
 
-		U.Data.searchSubscribe({
+		U.Subscription.subscribe({
 			subId: this.getSubId(),
 			filters,
 			sorts,
@@ -231,12 +244,8 @@ const MenuTemplateList = observer(class MenuTemplateList extends React.Component
 				vertical: I.MenuDirection.Bottom,
 				horizontal: I.MenuDirection.Right,
 				subIds: J.Menu.dataviewTemplate,
-				onOpen: () => {
-					node.addClass('active');
-				},
-				onClose: () => {
-					node.removeClass('active');
-				},
+				onOpen: () => node.addClass('active'),
+				onClose: () => node.removeClass('active'),
 				rebind: this.rebind,
 				parentId: id,
 				data: {

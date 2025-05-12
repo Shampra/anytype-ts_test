@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 import { observer } from 'mobx-react';
-import { IconObject } from 'Component';
+import { IconObject, Icon } from 'Component';
+import { J, S } from 'Lib';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -21,17 +22,37 @@ const VaultItem: FC<Props> = observer(({
 }) => {
 
 	const cn = [ 'item' ];
-	const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+	const theme = S.Common.getThemeClass();
+
+	let icon = null;
+	let cnt = null;
+	let disabled = false;
+
+	if (!item.isButton) {
+		icon = <IconObject object={item} size={36} iconSize={36} param={{ userIcon: J.Theme[theme].textInversion }} />;
+	} else {
+		cn.push(`isButton ${item.id}`);
+	};
+
+	if (!item.isButton) {
+		const counters = S.Chat.getSpaceCounters(item.targetSpaceId);
+
+		if (counters.mentionCounter) {
+			cnt = <Icon className="mention" />;
+		} else 
+		if (counters.messageCounter) {
+			cnt = counters.messageCounter;
+		};
+	};
+
+	if (cnt) {
+		disabled = true;
+	};
+
+	const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id, disabled });
 	const style = {
 		transform: CSS.Transform.toString(transform),
 		transition,
-	};
-
-	let icon = null;
-	if (!item.isButton) {
-		icon = <IconObject object={item} size={36} iconSize={36} />;
-	} else {
-		cn.push(`isButton ${item.id}`);
 	};
 
 	return (
@@ -49,6 +70,7 @@ const VaultItem: FC<Props> = observer(({
 		>
 			<div className="iconWrap">
 				{icon}
+				{cnt ? <div className="cnt">{cnt}</div> : ''}
 			</div>
 		</div>
 	);

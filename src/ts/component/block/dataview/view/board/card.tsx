@@ -7,7 +7,6 @@ interface Props extends I.ViewComponent {
 	id: string;
 	groupId: string;
 	onDragStartCard?: (e: any, groupId: any, record: any) => void;
-	recordIdx?: number;
 };
 
 const Card = observer(class Card extends React.Component<Props> {
@@ -57,8 +56,7 @@ const Card = observer(class Card extends React.Component<Props> {
 								viewType={view.type}
 								idPrefix={idPrefix}
 								arrayLimit={2}
-								showTooltip={true}
-								tooltipX={I.MenuDirection.Left}
+								tooltipParam={{ text: relation.name, typeX: I.MenuDirection.Left }}
 								onClick={e => this.onCellClick(e, relation)}
 								iconSize={relation.relationKey == 'name' ? 20 : 18}
 								withName={true}
@@ -85,7 +83,7 @@ const Card = observer(class Card extends React.Component<Props> {
 				draggable={true}
 				onDragStart={e => onDragStartCard(e, groupId, record)}
 				onClick={e => this.onClick(e)}
-				onContextMenu={e => onContext(e, record.id)}
+				onContextMenu={e => onContext(e, record.id, subId)}
 				{...U.Common.dataProps({ id: record.id })}
 			>
 				{content}

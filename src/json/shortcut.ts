@@ -11,11 +11,8 @@ const getSections = () => {
 			return item;
 		};
 
-		if (item.id) {
-			storage[item.id] = storage[item.id] || [];
-			if (storage[item.id].length) {
-				item.keys = storage[item.id];
-			};
+		if (item.id && storage[item.id]) {
+			item.keys = storage[item.id] || [];
 		};
 
 		item.symbols = keyboard.getSymbolsFromKeys(item.keys);
@@ -52,17 +49,17 @@ const getSections = () => {
 
 				{
 					name: translate('popupShortcutNavigation'), children: [
-						{ id: 'settings', name: translate('popupShortcutNavigationBasics1'), keys: [ cmdKey, ',' ] },
+						{ id: 'settings', name: translate('popupShortcutNavigationBasics1'), keys: [ cmdKey, 'comma' ] },
 						{ id: 'navigation', name: translate('popupShortcutNavigationBasics2'), keys: [ cmdKey, 'o' ] },
 						{ id: 'graph', name: translate('popupShortcutNavigationBasics3'), keys: [ cmdKey, 'alt', 'o' ] },
-						{ id: 'search', name: translate('popupShortcutNavigationBasics4'), keys: [ cmdKey, 's' ] },
+						{ id: 'search', name: translate('popupShortcutNavigationBasics4'), keys: [ cmdKey, 'k' ] },
 						{ id: 'home', name: translate('popupShortcutNavigationBasics6'), keys: [ 'alt', 'h' ] },
 						{ id: 'back', name: translate('popupShortcutNavigationBasics7'), keys: isMac ? [ cmdKey, '[' ] : [ 'alt', 'arrowleft' ] },
 						{ id: 'forward', name: translate('popupShortcutNavigationBasics8'), keys: isMac ? [ cmdKey, ']' ] : [ 'alt', 'arrowright' ] },
 						{ id: 'shortcut', name: translate('popupShortcutMainBasics14'), keys: [ 'ctrl', 'space' ] },
-						{ id: 'bin', name: translate('popupShortcutMainBasics14'), keys: [ cmdKey, 'alt', 'b' ] },
-						{ name: translate('popupShortcutMainBasics20'), keys: [ 'ctrl', 'tab' ] },
-						{ name: translate('popupShortcutMainBasics23'), keys: [ 'ctrl', 'shift', 'tab' ] },
+						{ id: 'bin', name: translate('popupShortcutNavigationBasics11'), keys: [ cmdKey, 'alt', 'b' ] },
+						{ id: 'nextSpace', name: translate('popupShortcutMainBasics20'), keys: [ 'ctrl', 'tab' ] },
+						{ id: 'prevSpace', name: translate('popupShortcutMainBasics23'), keys: [ 'ctrl', 'shift', 'tab' ] },
 						{ name: translate('popupShortcutMainBasics12'), keys: [ 'shift', 'click' ] },
 						{ name: translate('popupShortcutMainBasics13'), keys: [ cmdKey, 'click' ] },
 					]
@@ -70,8 +67,8 @@ const getSections = () => {
 
 				{
 					name: translate('popupShortcutNavigationMenu'), children: [
-						{ name: translate('popupShortcutNavigationMenu1'), keys: [ 'arrowdown', '[,]', 'tab' ] },
-						{ name: translate('popupShortcutNavigationMenu2'), keys: [ 'arrowup', '[,]', 'shift', 'tab' ] },
+						{ name: translate('popupShortcutNavigationMenu1'), keys: [ 'arrowdown' ] },
+						{ name: translate('popupShortcutNavigationMenu2'), keys: [ 'arrowup' ] },
 						{ name: translate('popupShortcutNavigationMenu3'), keys: [ 'arrowleft' ] },
 						{ name: translate('popupShortcutNavigationMenu4'), keys: [ 'arrowright' ] },
 						{ name: translate('popupShortcutNavigationMenu5'), keys: [ 'enter' ] },
@@ -96,8 +93,8 @@ const getSections = () => {
 						{ name: translate('popupShortcutMainStructuring1'), keys: [ 'enter' ] },
 						{ name: translate('popupShortcutMainStructuring2'), keys: [ 'shift', 'enter' ] },
 						{ name: translate('popupShortcutMainStructuring3'), keys: [ 'delete' ] },
-						{ id: 'indent', name: translate('popupShortcutMainStructuring4'), keys: [ 'tab' ], noEdit: true },
-						{ id: 'outdent', name: translate('popupShortcutMainStructuring5'), keys: [ 'shift', 'tab' ], noEdit: true },
+						{ id: 'indent', name: translate('popupShortcutMainStructuring4'), keys: [ 'tab' ] },
+						{ id: 'outdent', name: translate('popupShortcutMainStructuring5'), keys: [ 'shift', 'tab' ] },
 
 						{ name: translate('popupShortcutMainSelection1'), text: translate('popupShortcutMainSelectionDblClick') },
 						{ name: translate('popupShortcutMainSelection2'), text: translate('popupShortcutMainSelectionTplClick') },
@@ -116,8 +113,8 @@ const getSections = () => {
 						{ name: translate('popupShortcutNavigationPage5'), keys: [ cmdKey, 'arrowright' ] },
 						{ name: translate('popupShortcutNavigationPage6'), keys: [ cmdKey, 'arrowup' ] },
 						{ name: translate('popupShortcutNavigationPage7'), keys: [ cmdKey, 'arrowdown' ] },
-						{ id: 'moveSelectionUp', name: translate('popupShortcutNavigationPage8'), keys: [ cmdKey, 'shift', 'arrowup' ], noEdit: true },
-						{ id: 'moveSelectionDown', name: translate('popupShortcutNavigationPage10'), keys: [ cmdKey, 'shift', 'arrowdown' ], noEdit: true },
+						{ id: 'moveSelectionUp', name: translate('popupShortcutNavigationPage8'), keys: [ cmdKey, 'shift', 'arrowup' ] },
+						{ id: 'moveSelectionDown', name: translate('popupShortcutNavigationPage11'), keys: [ cmdKey, 'shift', 'arrowdown' ] },
 						{ name: translate('popupShortcutNavigationPage10'), keys: [ cmdKey, 'enter' ] },
 
 						{ id: 'turnBlock0', name: translate('popupShortcutEditorTurn0'), keys: [ cmdKey, '0' ], noEdit: true },
@@ -133,13 +130,14 @@ const getSections = () => {
 					]
 				},
 
+				/*
 				{
 					name: translate('popupShortcutChat'), children: [
-						{ name: translate('popupShortcutChat1'), keys: [ cmdKey, 'a' ] },
-						{ name: translate('popupShortcutChat2'), keys: [ cmdKey, 'e' ] },
-						{ name: translate('popupShortcutChat3'), keys: [ cmdKey, 'm' ] },
+						{ id: 'chatObject', name: translate('popupShortcutChat1'), keys: [ cmdKey, 't' ] },
+						{ id: 'chatMention', name: translate('popupShortcutChat3'), keys: [ cmdKey, 'm' ] },
 					]
 				},
+				*/
 
 				{
 					name: translate('popupShortcutMainTextStyle'), children: [
@@ -147,7 +145,7 @@ const getSections = () => {
 						{ id: 'textItalic', name: translate('popupShortcutMainTextStyle2'), keys: [ cmdKey, 'i' ] },
 						{ id: 'textUnderlined', name: translate('popupShortcutMainTextStyle3'), keys: [ cmdKey, 'u' ] },
 						{ id: 'textStrike', name: translate('popupShortcutMainTextStyle4'), keys: [ cmdKey, 'shift', 's' ] },
-						{ id: 'textLink', name: translate('popupShortcutMainTextStyle5'), keys: [ cmdKey, 'k' ] },
+						{ id: 'textLink', name: translate('popupShortcutMainTextStyle5'), keys: [ cmdKey, 'shift', 'k' ] },
 						{ id: 'textCode', name: translate('popupShortcutMainTextStyle6'), keys: [ cmdKey, 'l' ] },
 						{ id: 'textColor', name: translate('popupShortcutMainTextStyle7'), keys: [ cmdKey, 'shift', 'c' ] },
 						{ id: 'textBackground', name: translate('popupShortcutMainTextStyle8'), keys: [ cmdKey, 'shift', 'h' ] },

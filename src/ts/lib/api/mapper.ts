@@ -270,6 +270,7 @@ export const Mapper = {
 				layout: obj.getLayout(),
 				limit: obj.getLimit(),
 				viewId: obj.getViewid(),
+				autoAdded: obj.getAutoadded(),
 			};
 		},
 
@@ -599,7 +600,8 @@ export const Mapper = {
 				priceCents: obj.getPricestripeusdcents(),
 				colorStr: obj.getColorstr(),
 				features: obj.getFeaturesList(),
-				namesCount: obj.getAnynamescountincluded()
+				namesCount: obj.getAnynamescountincluded(),
+				offer: obj.getOffer(),
 			};
 		},
 
@@ -644,7 +646,7 @@ export const Mapper = {
 			};
 		},
 
-		ChatMessage: (obj: Model.ChatMessage): any => {
+		ChatMessage: (obj: Model.ChatMessage): Partial<I.ChatMessage> => {
 			return {
 				id: obj.getId(),
 				orderId: obj.getOrderid(),
@@ -655,6 +657,33 @@ export const Mapper = {
 				content: Mapper.From.ChatMessageContent(obj.getMessage()),
 				attachments: (obj.getAttachmentsList() || []).map(Mapper.From.ChatMessageAttachment),
 				reactions: Mapper.From.ChatMessageReaction(obj.getReactions()),
+				isReadMessage: obj.getRead(),
+				isReadMention: obj.getMentionread(),
+			};
+		},
+
+		ChatState: (obj: Model.ChatState): I.ChatState => {
+			return {
+				messages: Mapper.From.ChatStateUnreadMessages(obj.getMessages()),
+				mentions: Mapper.From.ChatStateUnreadMessages(obj.getMentions()),
+				lastStateId: obj.getLaststateid(),
+			};
+		},
+
+		ChatPreview: (obj: Rpc.Chat.SubscribeToMessagePreviews.Response.ChatPreview): any => {
+			return {
+				spaceId: obj.getSpaceid(),
+				chatId: obj.getChatobjectid(),
+				message: obj.hasMessage() ? Mapper.From.ChatMessage(obj.getMessage()) : null,
+				state: obj.hasState() ? Mapper.From.ChatState(obj.getState()) : null,
+				dependencies: (obj.getDependenciesList() || []).map(Decode.struct),
+			};
+		},
+
+		ChatStateUnreadMessages (obj: any): I.ChatStateCounter {
+			return {
+				orderId: obj.getOldestorderid(),
+				counter: obj.getCounter(),
 			};
 		},
 
@@ -692,7 +721,8 @@ export const Mapper = {
 				version: obj.getVersion(),
 				timestamp: obj.getTimestamp(),
 				size: obj.getSize(),
-				//details: Decode.struct(obj.getDetails()),
+				details: Decode.struct(obj.getDetails()),
+				joinSpace: obj.getJoinspace(),
 			};
 		},
 
@@ -1172,6 +1202,11 @@ export const Mapper = {
 			if (v == V.CHATUPDATE)					 t = 'ChatUpdate';
 			if (v == V.CHATDELETE)					 t = 'ChatDelete';
 			if (v == V.CHATUPDATEREACTIONS)			 t = 'ChatUpdateReactions';
+			if (v == V.CHATSTATEUPDATE)			 	 t = 'ChatStateUpdate';
+			if (v == V.CHATUPDATEMESSAGEREADSTATUS)	 t = 'ChatUpdateMessageReadStatus';
+			if (v == V.CHATUPDATEMENTIONREADSTATUS)	 t = 'ChatUpdateMentionReadStatus';
+
+			if (v == V.SPACEAUTOWIDGETADDED)		 t = 'SpaceAutoWidgetAdded';
 
 			return t;
 		},
@@ -1652,6 +1687,7 @@ export const Mapper = {
 				id: obj.getId(),
 				orderId: obj.getOrderid(),
 				message: Mapper.From.ChatMessage(obj.getMessage()),
+				subIds: obj.getSubidsList(),
 			};
 		},
 
@@ -1659,12 +1695,14 @@ export const Mapper = {
 			return {
 				id: obj.getId(),
 				message: Mapper.From.ChatMessage(obj.getMessage()),
+				subIds: obj.getSubidsList(),
 			};
 		},
 
 		ChatDelete: (obj: Events.Event.Chat.Delete) => {
 			return {
 				id: obj.getId(),
+				subIds: obj.getSubidsList(),
 			};
 		},
 
@@ -1672,6 +1710,38 @@ export const Mapper = {
 			return {
 				id: obj.getId(),
 				reactions: Mapper.From.ChatMessageReaction(obj.getReactions()),
+				subIds: obj.getSubidsList(),
+			};
+		},
+
+		ChatStateUpdate: (obj: Events.Event.Chat.UpdateState) => {
+			return {
+				state: Mapper.From.ChatState(obj.getState()),
+				subIds: obj.getSubidsList(),
+			};
+		},
+
+		ChatUpdateMessageReadStatus: (obj: Events.Event.Chat.UpdateMessageReadStatus) => {
+			return {
+				ids: obj.getIdsList(),
+				isRead: obj.getIsread(),
+				subIds: obj.getSubidsList(),
+			};
+		},
+
+		ChatUpdateMentionReadStatus: (obj: Events.Event.Chat.UpdateMentionReadStatus) => {
+			return {
+				ids: obj.getIdsList(),
+				isRead: obj.getIsread(),
+				subIds: obj.getSubidsList(),
+			};
+		},
+
+		SpaceAutoWidgetAdded: (obj: Events.Event.Space.AutoWidgetAdded) => {
+			return {
+				widgetId: obj.getWidgetblockid(),
+				targetId: obj.getTargetid(),
+				targetName: obj.getTargetname(),
 			};
 		},
 

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { observer } from 'mobx-react';
 import { Icon, Editable } from 'Component';
-import { I, C, S, U, J, keyboard, analytics, translate } from 'Lib';
+import { I, C, S, U, J, keyboard, analytics, translate, Dataview } from 'Lib';
 
 interface State {
 	isEditing: boolean;
@@ -36,10 +36,10 @@ const Head = observer(class Head extends React.Component<I.ViewComponent, State>
 	render () {
 		const { block, readonly, className, isCollection, getTarget } = this.props;
 		const { isEditing } = this.state;
-		const { targetObjectId } = block.content;
+		const targetObjectId = block.getTargetObjectId();
 		const object = getTarget();
 		const cn = [ 'dataviewHead' ];
-		const placeholder = isCollection ? translate('defaultNameCollection') : translate('defaultNameSet');
+		const placeholder = Dataview.namePlaceholder(object.layout);
 
 		if (className) {
 			cn.push(className);
@@ -105,7 +105,7 @@ const Head = observer(class Head extends React.Component<I.ViewComponent, State>
 		const { isEditing } = this.state;
 		const element = `#block-head-${block.id}`;
 		const object = S.Detail.get(rootId, targetObjectId);
-		const sourceName = isCollection ? 'collection' : 'set';
+		const sourceName = isCollection ? translate('commonCollection') : translate('commonSet');
 		const canEdit = !readonly && !object.isDeleted;
 		const canSource = !readonly && !object.isDeleted;
 
@@ -190,7 +190,7 @@ const Head = observer(class Head extends React.Component<I.ViewComponent, State>
 			};
 		} else {
 			filters = filters.concat([
-				{ relationKey: 'resolvedLayout', condition: I.FilterCondition.Equal, value: I.ObjectLayout.Set },
+				{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: [ I.ObjectLayout.Set, I.ObjectLayout.Type ] },
 				{ relationKey: 'setOf', condition: I.FilterCondition.NotEmpty, value: null },
 			]);
 
@@ -225,6 +225,7 @@ const Head = observer(class Head extends React.Component<I.ViewComponent, State>
 					canAdd: true,
 					value: [ targetObjectId ],
 					addParam,
+					withPlural: true,
 					onSelect: (item: any) => {
 						C.BlockDataviewCreateFromExistingObject(rootId, block.id, item.id, (message: any) => onCreate(message, false));
 						this.menuContext.close();
@@ -298,12 +299,12 @@ const Head = observer(class Head extends React.Component<I.ViewComponent, State>
 
 		const { getTarget } = this.props;
 		const object = getTarget();
+		const placeholder = Dataview.namePlaceholder(object.layout);
 
-		let name = String(object.name || '');
+		let name = U.Object.name(object, true);
 		if ([ 
 			translate('defaultNamePage'), 
-			translate('defaultNameSet'), 
-			translate('defaultNameCollection'),
+			placeholder,
 		].includes(name)) {
 			name = '';
 		};
@@ -326,30 +327,30 @@ const Head = observer(class Head extends React.Component<I.ViewComponent, State>
 	save () {
 		const { isEditing } = this.state;
 		const { block, getTarget } = this.props;
-		const { targetObjectId } = block.content;
-		const object = getTarget();
+		const targetId = block.getTargetObjectId();
 
-		if (!isEditing || !targetObjectId) {
+		if (!isEditing || !targetId) {
 			return;
 		};
+
+		const object = getTarget();
+		const placeholder = Dataview.namePlaceholder(object.layout);
 		
 		let value = this.getValue();
-		if (value == object.name) {
+		if ([ object.name, object.pluralName ].includes(value)) {
 			return;
 		};
 
 		if ([ 
 			translate('defaultNamePage'), 
-			translate('defaultNameSet'), 
-			translate('defaultNameCollection'),
+			placeholder,
 		].includes(value)) {
 			value = '';
 		};
 
-		if (targetObjectId) {
-			U.Object.setName(targetObjectId, value);
-		};
-		
+		const key = U.Object.isTypeLayout(object.layout) ? 'pluralName' : 'name';
+		C.ObjectListSetDetails([ targetId ], [ { key, value } ]);
+
 		this.ref?.placeholderCheck();
 	};
 

@@ -1,5 +1,5 @@
-import { observable, action, computed, set, makeObservable } from 'mobx';
-import { I, M, C, S, Storage, analytics, Renderer, keyboard } from 'Lib';
+import { observable, action, computed, set, makeObservable, intercept } from 'mobx';
+import { I, M, C, S, U, Storage, analytics, Renderer, keyboard } from 'Lib';
 
 interface NetworkConfig {
 	mode: I.NetworkMode;
@@ -13,6 +13,7 @@ class AuthStore {
 	public token = '';
 	public appToken = '';
 	public appKey = '';
+	public startingId = '';
 	public membershipData: I.Membership = { tier: I.TierType.None, status: I.MembershipStatus.Unknown };
 	public syncStatusMap: Map<string, I.SyncStatus> = new Map();
 	
@@ -21,7 +22,6 @@ class AuthStore {
 			accountItem: observable,
 			accountList: observable,
 			membershipData: observable,
-			syncStatusMap: observable,
 			membership: computed,
 			accounts: computed,
 			account: computed,
@@ -83,9 +83,26 @@ class AuthStore {
 	};
 
 	syncStatusUpdate (v: I.SyncStatus) {
-		const obj = this.getSyncStatus(v.id);
+		let obj = this.syncStatusMap.get(v.id);
 
-		this.syncStatusMap.set(v.id, Object.assign(obj, v));
+		if (!obj) {
+			obj = Object.assign(this.getDefaultSyncStatus(), v);
+
+			makeObservable(obj, {
+				error: observable,
+				network: observable,
+				status: observable,
+				p2p: observable,
+				syncingCounter: observable,
+				devicesCounter: observable,
+			});
+
+			intercept(obj as any, change => U.Common.intercept(obj, change));
+		} else {
+			set(obj, v);
+		};
+
+		this.syncStatusMap.set(v.id, obj);
 	};
 
 	accountAdd (account: any) {
@@ -137,16 +154,20 @@ class AuthStore {
 		].includes(this.accountItem.status.type);
 	};
 
-	getSyncStatus (spaceId?: string): I.SyncStatus {
-		return this.syncStatusMap.get(spaceId || S.Common.space) || {
+	getDefaultSyncStatus (): I.SyncStatus {
+		return {
 			id: '',
 			error: I.SyncStatusError.None,
 			network: I.SyncStatusNetwork.Anytype,
 			status: I.SyncStatusSpace.Offline,
 			p2p: I.P2PStatus.NotConnected,
 			syncingCounter: 0,
-			devicesCounter: 0
+			devicesCounter: 0,
 		};
+	};
+
+	getSyncStatus (spaceId?: string): I.SyncStatus {
+		return this.syncStatusMap.get(spaceId || S.Common.space) || this.getDefaultSyncStatus();
 	};
 
 	clearAll () {
@@ -158,32 +179,32 @@ class AuthStore {
 	};
 
 	logout (mainWindow: boolean, removeData: boolean) {
-		if (mainWindow) {
-			C.AccountStop(removeData, () => {
-				C.WalletCloseSession(this.token);
+		U.Subscription.destroyAll(() => {
+			if (mainWindow) {
+				C.AccountStop(removeData, () => U.Data.closeSession());
+				Renderer.send('logout');
+			} else {
+				U.Data.closeSession();
+			};
 
-				this.tokenSet('');
-			});
+			analytics.profile('', '');
+			analytics.removeContext();
 
-			Renderer.send('logout');
-		};
+			keyboard.setPinChecked(false);
 
-		analytics.profile('', '');
-		analytics.removeContext();
+			S.Common.spaceSet('');
 
-		keyboard.setPinChecked(false);
+			S.Block.clearAll();
+			S.Detail.clearAll();
+			S.Record.clearAll();
+			S.Menu.closeAllForced();
+			S.Notification.clear();
+			S.Chat.clearAll();
 
-		S.Common.spaceSet('');
+			this.clearAll();
+			Storage.logout();
 
-		S.Block.clearAll();
-		S.Detail.clearAll();
-		S.Record.clearAll();
-		S.Menu.closeAllForced();
-		S.Notification.clear();
-		S.Chat.clearAll();
-
-		this.clearAll();
-		Storage.logout();
+		});
 	};
 
 };

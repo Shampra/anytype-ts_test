@@ -3,8 +3,8 @@ import $ from 'jquery';
 import sha1 from 'sha1';
 import { observer } from 'mobx-react';
 import { AutoSizer, CellMeasurer, CellMeasurerCache, InfiniteLoader, List } from 'react-virtualized';
-import { Label, Button } from 'Component';
-import { I, C, S, U, J, analytics, Relation, Storage, translate } from 'Lib';
+import { Label } from 'Component';
+import { I, C, S, U, J, analytics, Relation, Storage, translate, Action } from 'Lib';
 import Item from './item';
 
 const MAX_DEPTH = 15; // Maximum depth of the tree
@@ -13,11 +13,12 @@ const HEIGHT = 28; // Height of each row
 
 interface WidgetTreeRefProps {
 	updateData: () => void;
+	resize: () => void;
 };
 
 const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((props, ref) => {
 
-	const { block, parent, isPreview, canCreate, onCreate, isSystemTarget, getData, getTraceId, sortFavorite, addGroupLabels } = props;
+	const { block, parent, isPreview, isSystemTarget, getData, getTraceId, sortFavorite, addGroupLabels } = props;
 	const targetId = block ? block.getTargetObjectId() : '';
 	const nodeRef = useRef(null);
 	const listRef = useRef(null);
@@ -28,33 +29,18 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 	const top = useRef(0);
 	const branches = useRef([]);
 	const subscriptionHashes = useRef({});
-	const cache = useRef(new CellMeasurerCache());
+	const cache = useRef(new CellMeasurerCache({ fixedHeight: true, defaultHeight: HEIGHT }));
 	const [ dummy, setDummy ] = useState(0);
 	const isRecent = [ J.Constant.widgetId.recentOpen, J.Constant.widgetId.recentEdit ].includes(targetId);
-
-	const unsubscribe = () => {	
-		const subIds = Object.keys(subscriptionHashes.current).map(getSubId);
-
-		if (subIds.length) {
-			C.ObjectSearchUnsubscribe(subIds);
-			clear();
-		};
-	};
+	const traceId = getTraceId();
 
 	const clear = () => {
-		const subIds = Object.keys(subscriptionHashes.current).map(getSubId);
-
 		subscriptionHashes.current = {};
 		branches.current = [];
-
-		subIds.forEach(subId => {
-			S.Record.recordsClear(subId, '');
-			S.Record.recordsClear(`${subId}/dep`, '');
-		});
 	};
 
 	const updateData = () => {
-		if (isSystemTarget()) {
+		if (isSystemTarget) {
 			getData(getSubId(), initCache);
 		};
 	};
@@ -75,7 +61,7 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 		branches.current = [];
 
 		let children = [];
-		if (isSystemTarget()) {
+		if (isSystemTarget) {
 			const subId = getSubId(targetId);
 			
 			let records = S.Record.getRecordIds(subId, '');
@@ -171,7 +157,7 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 		};
 
 		subscriptionHashes.current[nodeId] = hash;
-		U.Data.subscribeIds({
+		U.Subscription.subscribeIds({
 			subId,
 			ids: links,
 			keys: J.Relation.sidebar,
@@ -220,7 +206,7 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 		e.stopPropagation();
 
 		U.Object.openEvent(e, item);
-		analytics.event('OpenSidebarObject');
+		analytics.event('OpenSidebarObject', { widgetType: analytics.getWidgetType(parent.content.autoAdded) });
 	};
 
 	const getTotalHeight = () => {
@@ -257,7 +243,6 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 		node.css(css);
 	};
 
-
 	const nodes = loadTree();
 	const length = nodes.length;
 
@@ -266,15 +251,7 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 	if (!length) {
 		content = (
 			<div className="emptyWrap">
-				<Label className="empty" text={canCreate ? translate('widgetEmptyLabelCreate') : translate('widgetEmptyLabel')} />
-				{canCreate ? (
-					<Button 
-						text={translate('commonCreateObject')} 
-						color="blank" 
-						className="c28" 
-						onClick={() => onCreate({ route: analytics.route.inWidget })} 
-					/> 
-				) : ''}
+				<Label className="empty" text={translate('widgetEmptyLabel')} />
 			</div>
 		);
 	} else 
@@ -362,14 +339,15 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 	useEffect(() => {
 		links.current = object.links;
 
-		if (isSystemTarget()) {
+		if (isSystemTarget) {
 			getData(getSubId(), initCache);
 		} else {
 			initCache();
-			C.ObjectShow(targetId, getTraceId(), U.Router.getRouteSpaceId());
-		};
 
-		return () => unsubscribe();
+			if (targetId) {
+				C.ObjectShow(targetId, traceId, U.Router.getRouteSpaceId());
+			};
+		};
 	}, []);
 
 	useEffect(() => {
@@ -385,10 +363,13 @@ const WidgetTree = observer(forwardRef<WidgetTreeRefProps, I.WidgetComponent>((p
 
 		listRef.current?.recomputeRowHeights(0);
 		listRef.current?.scrollToPosition(top.current);
+
+		$(`#widget-${parent.id}`).toggleClass('isEmpty', !length);
 	});
 
 	useImperativeHandle(ref, () => ({
 		updateData,
+		resize,
 	}));
 
 	return (

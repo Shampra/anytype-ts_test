@@ -56,11 +56,13 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 							id={`button-${block.id}-${item.type}`} 
 							key={i} 
 							className={cn.join(' ')} 
-							tooltip={item.name}
-							tooltipCaption={item.caption}
-							tooltipY={I.MenuDirection.Top}
 							inner={item.inner}
 							onMouseDown={e => this.onButton(e, item)}
+							tooltipParam={{
+								text: item.name,
+								caption: item.caption,
+								typeY: I.MenuDirection.Top,
+							}}
 						/>
 					);
 				})}
@@ -117,9 +119,12 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 		const { marks, range } = getMarksAndRange();
 		const { from, to } = range;
 		const mark = Mark.getInRange(marks, type, { from, to });
+		const rect = U.Common.getSelectionRect();
+		const win = $(window);
 
 		const menuParam: any = {
 			element: `#button-${block.id}-${type}`,
+			rect: rect ? { ...rect, y: rect.y + win.scrollTop() } : null,
 			className: 'fixed',
 			offsetY: -8,
 			vertical: I.MenuDirection.Top,

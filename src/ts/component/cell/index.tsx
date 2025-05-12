@@ -12,11 +12,8 @@ import CellFile from './file';
 
 interface Props extends I.Cell {
 	elementId?: string;
-	showTooltip?: boolean;
-	tooltipX?: I.MenuDirection.Left | I.MenuDirection.Center | I.MenuDirection.Right;
-	tooltipY?: I.MenuDirection.Top | I.MenuDirection.Bottom;
+	tooltipParam?: I.TooltipParam;
 	maxWidth?: number;
-	recordIdx?: number;
 };
 
 const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
@@ -24,7 +21,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 	const { 
 		elementId, relationKey, recordId, getRecord, getView, idPrefix, pageContainer,
 		isInline, menuClassName = '', menuClassNameWrap = '', block, subId, rootId, onCellChange,
-		onMouseEnter, onMouseLeave, maxWidth, cellPosition, onClick, showTooltip, withName, readonly, tooltipX, tooltipY,
+		onMouseEnter, onMouseLeave, maxWidth, cellPosition, onClick, readonly, tooltipParam = {},
 	} = props;
 	const view = getView ? getView() : null;
 	const record = getRecord(recordId);
@@ -123,7 +120,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 					childRef.current.setEditing(true);
 				};
 
-				if (childRef.current && childRef.current.onClick) {
+				if (childRef.current.onClick) {
 					childRef.current.onClick(e);
 				};
 			};
@@ -137,7 +134,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 			keyboard.disableSelection(false);
 
 			if (childRef.current) {
-				if (childRef.current && childRef.current.onBlur) {
+				if (childRef.current.onBlur) {
 					childRef.current.onBlur();
 				};
 
@@ -319,7 +316,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 							};
 
 							case 'reload': {
-								C.ObjectBookmarkFetch(rootId, value, () => analytics.event('ReloadSourceData'));
+								C.ObjectBookmarkFetch(record.id, value, () => analytics.event('ReloadSourceData'));
 								break;
 							};
 						};
@@ -403,15 +400,15 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 
 	const onMouseEnterHandler = (e: any) => {
 		const cell = $(`#${Relation.cellId(idPrefix, relation.relationKey, record.id)}`);
+		const { text = '', caption = '' } = tooltipParam;
+		const t = Preview.tooltipCaption(text, caption);
 
 		if (onMouseEnter) {
 			onMouseEnter(e);
 		};
 
-		if (showTooltip) {
-			const text = !checkValue() && withName ? translate(`placeholderCell${relation.format}`) : relation.name;
-
-			Preview.tooltipShow({ text, element: cell, typeX: tooltipX, typeY: tooltipY, delay: 1000 });
+		if (t) {
+			Preview.tooltipShow({ ...tooltipParam, text: t, element: cell });
 		};
 	};
 	
@@ -424,9 +421,12 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 	};
 
 	const getPlaceholder = (relation: any, record: any): string => {
-		const canEdit = canCellEdit(relation, record);
+		if (!relation.id) {
+			return translate(`placeholderCellCommon`);
+		};
 
-		return !canEdit ? translate(`placeholderCellCommon`) : (placeholder || translate(`placeholderCell${relation.format}`));
+		const canEdit = canCellEdit(relation, record);
+		return !canEdit ? translate(`placeholderCellCommon`) : (props.placeholder || translate(`placeholderCell${relation.format}`));
 	};
 
 	const canCellEdit = (relation: any, record: any): boolean => {
@@ -509,6 +509,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 	useImperativeHandle(ref, () => ({
 		onClick: onClickHandler,
 		isEditing: () => childRef.current.isEditing(),
+		canEdit: () => canCellEdit(relation, record),
 	}));
 
 	return (

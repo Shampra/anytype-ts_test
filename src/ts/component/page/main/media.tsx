@@ -39,7 +39,6 @@ const PageMainMedia = observer(class PageMainMedia extends React.Component<I.Pag
 		const allowedDetails = S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Details ]);
 		const allowedRelation = false; //S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Relation ]);
 		const type = S.Record.getTypeById(object.type);
-		const skipKeys = [ 'description' ];
 		const showSidebar = S.Common.getShowSidebarRight(isPopup);
 
 		if (isDeleted) {
@@ -56,11 +55,11 @@ const PageMainMedia = observer(class PageMainMedia extends React.Component<I.Pag
 		};
 
 		let relations = Relation.getArrayValue(type?.recommendedFileRelations).
-			map(it => S.Record.getRelationById(it)).
-			filter(it => it && !skipKeys.includes(it.relationKey));
+			map(it => S.Record.getRelationById(it));
 
+		relations.unshift(S.Record.getRelationByKey('description'));
+		relations = relations.filter(it => it);
 		relations = S.Record.checkHiddenObjects(relations);
-		relations.sort((c1, c2) => U.Data.sortByFormat(c1, c2));
 
 		const isVideo = file?.isFileVideo();
 		const isImage = file?.isFileImage();
@@ -239,7 +238,7 @@ const PageMainMedia = observer(class PageMainMedia extends React.Component<I.Pag
 		};
 
 		const { isPopup } = this.props;
-		const close = !(isPopup && (this.getRootId() == this.id));
+		const close = !isPopup || (this.getRootId() == this.id);
 
 		if (close) {
 			Action.pageClose(this.id, true);

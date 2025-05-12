@@ -5,7 +5,7 @@ import { observable, set } from 'mobx';
 import Commands from 'dist/lib/pb/protos/commands_pb';
 import Events from 'dist/lib/pb/protos/events_pb';
 import Service from 'dist/lib/pb/protos/service/service_grpc_web_pb';
-import { I, M, S, U, J, analytics, Renderer, Action, Dataview, Mapper, keyboard } from 'Lib';
+import { I, M, S, U, J, analytics, Renderer, Action, Dataview, Mapper, keyboard, Preview, focus } from 'Lib';
 import * as Response from './response';
 import { ClientReadableStream } from 'grpc-web';
 
@@ -42,8 +42,9 @@ class Dispatcher {
 		this.service = new Service.ClientCommandsClient(address, null, null);
 	};
 
-	listenEvents () {
+	startStream () {
 		if (!S.Auth.token) {
+			console.error('[Dispatcher.startStream] No token');
 			return;
 		};
 
@@ -52,11 +53,13 @@ class Dispatcher {
 		const request = new Commands.StreamRequest();
 		request.setToken(S.Auth.token);
 
+		this.stopStream();
+
 		this.stream = this.service.listenSessionEvents(request, null);
 
 		this.stream.on('data', (event) => {
 			try {
-				this.event(event, false);
+				this.event(event, false, false);
 			} catch (e) {
 				console.error(e);
 			};
@@ -75,6 +78,13 @@ class Dispatcher {
 		});
 	};
 
+	stopStream () {
+		if (this.stream) {
+			this.stream.cancel();
+			this.stream = null;
+		};
+	};
+
 	reconnect () {
 		let t = 3;
 		if (this.reconnects == 20) {
@@ -87,12 +97,12 @@ class Dispatcher {
 
 		window.clearTimeout(this.timeoutStream);
 		this.timeoutStream = window.setTimeout(() => { 
-			this.listenEvents(); 
+			this.startStream(); 
 			this.reconnects++;
 		}, t * 1000);
 	};
 
-	event (event: Events.Event, skipDebug?: boolean) {
+	event (event: Events.Event, isSync: boolean, skipDebug: boolean) {
 		const { config, space } = S.Common;
 		const { account } = S.Auth;
 		const traceId = event.getTraceid();
@@ -320,6 +330,11 @@ class Dispatcher {
 
 					if (!block) {
 						break;
+					};
+
+					if (!isSync && (id == focus.state.focused)) {
+						console.error('[Dispatcher] BlockSetText: focus', id);
+						Sentry.captureMessage('[Dispatcher] BlockSetText: focus');
 					};
 
 					const content: any = {};
@@ -937,18 +952,11 @@ class Dispatcher {
 				};
 
 				case 'ImportFinish': {
-					const { collectionId, count, type } = mapped;
-
-					if (collectionId) {
-						window.setTimeout(() => {
-							S.Popup.open('objectManager', { 
-								data: { 
-									collectionId, 
-									type: I.ObjectManagerPopup.Favorites,
-								} 
-							});
-						}, S.Popup.getTimeout() + 10);
+					if (!account) {
+						break;
 					};
+
+					const { count, type } = mapped;
 
 					analytics.event('Import', { type, count });
 					break;
@@ -956,16 +964,19 @@ class Dispatcher {
 
 				case 'ChatAdd': {
 					const orderId = mapped.orderId;
-					const list = S.Chat.getList(rootId);
 					const message = new M.ChatMessage(mapped.message);
 					const author = U.Space.getParticipant(U.Space.getParticipantId(space, message.creator));
 
-					let idx = list.findIndex(it => it.orderId == orderId);
-					if (idx < 0) {
-						idx = list.length;
-					};
+					mapped.subIds.forEach(subId => {
+						const list = S.Chat.getList(subId);
 
-					S.Chat.add(rootId, idx, message);
+						let idx = list.findIndex(it => it.orderId == orderId);
+						if (idx < 0) {
+							idx = list.length;
+						};
+
+						S.Chat.add(subId, idx, message);
+					});
 
 					if (isMainWindow && !electron.isFocused() && (message.creator != account.id)) {
 						U.Common.notification({ title: author?.name, text: message.content.text }, () => {
@@ -975,34 +986,59 @@ class Dispatcher {
 							};
 
 							if (spaceId != space) {
-								U.Router.switchSpace(spaceId, '', false, { onRouteChange: open });
+								U.Router.switchSpace(spaceId, '', false, { onRouteChange: open }, false);
 							} else {
 								open();
 							};
 						});
 					};
 
-					$(window).trigger('messageAdd', [ message ]);
+					$(window).trigger('messageAdd', [ message, mapped.subIds ]);
 					break;
 				};
 
 				case 'ChatUpdate': {
-					S.Chat.update(rootId, mapped.message);
+					mapped.subIds.forEach(subId => S.Chat.update(subId, mapped.message));
 
 					$(window).trigger('messageUpdate', [ mapped.message ]);
 					break;
 				};
 
+				case 'ChatStateUpdate': {
+					mapped.subIds.forEach(subId => {
+						if (subId == J.Constant.subId.chatSpace) {
+							subId = S.Chat.getSubId(spaceId, rootId);
+						};
+
+						S.Chat.setState(subId, mapped.state);
+					});
+
+					$(window).trigger('chatStateUpdate');
+					break;
+				};
+
+				case 'ChatUpdateMessageReadStatus': {
+					mapped.subIds.forEach(subId => S.Chat.setReadMessageStatus(subId, mapped.ids, mapped.isRead));
+					break;
+				};
+
+				case 'ChatUpdateMentionReadStatus': {
+					mapped.subIds.forEach(subId => S.Chat.setReadMentionStatus(subId, mapped.ids, mapped.isRead));
+					break;
+				};
+
 				case 'ChatDelete': {
-					S.Chat.delete(rootId, mapped.id);
+					mapped.subIds.forEach(subId => S.Chat.delete(subId, mapped.id));
 					break;
 				};
 
 				case 'ChatUpdateReactions': {
-					const message = S.Chat.getMessage(rootId, mapped.id);
-					if (message) {
-						set(message, { reactions: mapped.reactions });
-					};
+					mapped.subIds.forEach((subId) => {
+						const message = S.Chat.getMessage(subId, mapped.id);
+						if (message) {
+							set(message, { reactions: mapped.reactions });
+						};
+					});
 
 					$(window).trigger('reactionUpdate', [ message ]);
 					break;
@@ -1048,6 +1084,14 @@ class Dispatcher {
 					S.Auth.syncStatusUpdate(mapped);
 					break;
 				};
+
+				case 'SpaceAutoWidgetAdded': {
+					Preview.toastShow({ objectId: mapped.targetId, action: I.ToastAction.Widget, icon: 'check' });
+
+					analytics.createWidget(0, '', analytics.widgetType.auto);
+					break;
+				};
+
 			};
 
 			if (needLog) {
@@ -1085,7 +1129,7 @@ class Dispatcher {
 			const object = U.Space.getSpaceview(id);
 
 			if (intersection.length && object.targetSpaceId) {
-				U.Data.createSubSpaceSubscriptions([ object.targetSpaceId ]);
+				U.Subscription.createSubSpace([ object.targetSpaceId ]);
 			};
 
 			if (object.isAccountDeleted && (object.targetSpaceId == space)) {
@@ -1276,7 +1320,7 @@ class Dispatcher {
 				};
 
 				if (message.event) {
-					this.event(message.event, true);
+					this.event(message.event, true, true);
 				};
 
 				const middleTime = Math.ceil(t1 - t0);

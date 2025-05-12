@@ -1,13 +1,5 @@
 import * as Sentry from '@sentry/browser';
-import { I, C, M, S, J, U, keyboard, translate, Storage, analytics, dispatcher, Mark, focus, Renderer, Action, Survey, Relation } from 'Lib';
-
-const SYSTEM_DATE_RELATION_KEYS = [
-	'lastModifiedDate', 
-	'lastOpenedDate', 
-	'createdDate',
-	'addedDate',
-	'lastUsedDate',
-];
+import { I, C, M, S, J, U, keyboard, translate, Storage, analytics, dispatcher, Mark, focus, Renderer, Action, Relation } from 'Lib';
 
 class UtilData {
 
@@ -158,8 +150,6 @@ class UtilData {
 		const { pin } = S.Common;
 		const { root, widgets } = S.Block;
 		const { redirect, space } = S.Common;
-		const color = Storage.get('color');
-		const bgColor = Storage.get('bgColor');
 		const routeParam = Object.assign({ replace: true }, param.routeParam);
 		const route = param.route || redirect;
 
@@ -180,7 +170,7 @@ class UtilData {
 					return;
 				};
 
-				this.createSpaceSubscriptions(() => {
+				U.Subscription.createSpace(() => {
 					// Redirect
 					if (pin && !keyboard.isPinChecked) {
 						U.Router.go('/auth/pin-check', routeParam);
@@ -193,15 +183,6 @@ class UtilData {
 
 						S.Common.redirectSet('');
 					};
-
-					if (!color) {
-						Storage.set('color', 'orange');
-					};
-					if (!bgColor) {
-						Storage.set('bgColor', 'orange');
-					};
-
-					Storage.clearDeletedSpaces();
 
 					if (callBack) {
 						callBack();
@@ -224,276 +205,56 @@ class UtilData {
 			};
 		});
 
-		this.getMembershipTiers(noTierCache);
-		this.getMembershipStatus();
-		this.createGlobalSubscriptions();
+		C.ChatSubscribeToMessagePreviews(J.Constant.subId.chatSpace, (message: any) => {
+			for (const item of message.previews) {
+				S.Chat.setState(S.Chat.getSubId(item.spaceId, item.chatId), item.state);
+			};
+		});
+
+		this.getMembershipTiers(noTierCache, () => this.getMembershipStatus());
+		U.Subscription.createGlobal(() => Storage.clearDeletedSpaces());
 
 		analytics.event('OpenAccount');
 	};
 
 	onAuthWithoutSpace (param?: Partial<I.RouteParam>) {
-		this.createGlobalSubscriptions(() => U.Space.openFirstSpaceOrVoid(null, param));
-	};
-
-	createAllSubscriptions (callBack?: () => void) {
-		this.createGlobalSubscriptions(() => {
-			this.createSpaceSubscriptions(callBack);
-		});
-	};
-
-	createGlobalSubscriptions (callBack?: () => void) {
-		const { account } = S.Auth;
-
-		if (!account) {
-			if (callBack) {
-				callBack();
-			};
-			return;
-		};
-
-		const { techSpaceId } = account.info;
-		const list: any[] = [
-			{
-				spaceId: techSpaceId,
-				subId: J.Constant.subId.profile,
-				keys: this.profileRelationKeys(),
-				filters: [
-					{ relationKey: 'id', condition: I.FilterCondition.Equal, value: account.info.profileObjectId },
-				],
-				noDeps: true,
-				ignoreHidden: false,
-			},
-			{
-				spaceId: techSpaceId,
-				subId: J.Constant.subId.space,
-				keys: this.spaceRelationKeys(),
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.Equal, value: I.ObjectLayout.SpaceView },
-				],
-				sorts: [
-					{ relationKey: 'createdDate', type: I.SortType.Desc },
-				],
-				ignoreHidden: false,
-			},
-		];
-
-		this.createSubscriptions(list, () => {
-			this.createSubSpaceSubscriptions(null, callBack);
-		});
-	};
-
-	createSubSpaceSubscriptions (ids: string[], callBack?: () => void) {
-		const { account } = S.Auth;
-		const skipIds = U.Space.getSystemDashboardIds();
-
-		if (!account) {
-			if (callBack) {
-				callBack();
-			};
-			return;
-		};
-
-		let spaces = U.Space.getList();
-		if (ids && ids.length) {
-			spaces = spaces.filter(it => ids.includes(it.targetSpaceId));
-		};
-
-		if (!spaces.length) {
-			if (callBack) {
-				callBack();
-			};
-			return;
-		};
-
-		const list = [];
-
-		spaces.forEach(space => {
-			const ids = [
-				space.creator,
-				U.Space.getParticipantId(space.targetSpaceId, account.id),
-			];
-
-			if (!skipIds.includes(space.spaceDashboardId)) {
-				ids.push(space.spaceDashboardId);
-			};
-
-			list.push({
-				spaceId: space.targetSpaceId,
-				subId: U.Space.getSubSpaceSubId(space.targetSpaceId),
-				keys: this.participantRelationKeys(),
-				filters: [
-					{ relationKey: 'id', condition: I.FilterCondition.In, value: ids },
-				],
-				noDeps: true,
-				ignoreDeleted: true,
-				ignoreHidden: true,
-				ignoreArchived: true,
-			});
-		});
-
-		this.createSubscriptions(list, callBack);
-	};
-
-	createSpaceSubscriptions (callBack?: () => void): void {
-		const list: any[] = [
-			{
-				subId: J.Constant.subId.deleted,
-				keys: [],
-				filters: [
-					{ relationKey: 'isDeleted', condition: I.FilterCondition.Equal, value: true },
-				],
-				ignoreDeleted: false,
-				noDeps: true,
-			},
-			{
-				subId: J.Constant.subId.type,
-				keys: this.typeRelationKeys(),
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: I.ObjectLayout.Type },
-				],
-				sorts: [
-					{ relationKey: 'lastUsedDate', type: I.SortType.Desc },
-					{ relationKey: 'name', type: I.SortType.Asc },
-				],
-				noDeps: true,
-				ignoreDeleted: true,
-				ignoreHidden: false,
-				withArchived: true,
-				onSubscribe: () => {
-					S.Record.getTypes().forEach(it => S.Record.typeKeyMapSet(it.spaceId, it.uniqueKey, it.id));
-				}
-			},
-			{
-				spaceId: J.Constant.storeSpaceId,
-				subId: J.Constant.subId.typeStore,
-				keys: this.typeRelationKeys(),
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: I.ObjectLayout.Type },
-				],
-				sorts: [
-					{ relationKey: 'lastUsedDate', type: I.SortType.Desc },
-					{ relationKey: 'name', type: I.SortType.Asc },
-				],
-				noDeps: true,
-				ignoreDeleted: true,
-				ignoreHidden: false,
-			},
-			{
-				subId: J.Constant.subId.relation,
-				keys: J.Relation.relation,
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: I.ObjectLayout.Relation },
-				],
-				noDeps: true,
-				ignoreDeleted: true,
-				ignoreHidden: false,
-				withArchived: true,
-				onSubscribe: () => {
-					S.Record.getRelations().forEach(it => S.Record.relationKeyMapSet(it.spaceId, it.relationKey, it.id));
-				},
-			},
-			{
-				spaceId: J.Constant.storeSpaceId,
-				subId: J.Constant.subId.relationStore,
-				keys: J.Relation.relation,
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: I.ObjectLayout.Relation },
-				],
-				noDeps: true,
-				ignoreDeleted: true,
-				ignoreHidden: false,
-			},
-			{
-				subId: J.Constant.subId.option,
-				keys: J.Relation.option,
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.Equal, value: I.ObjectLayout.Option },
-				],
-				sorts: [
-					{ relationKey: 'name', type: I.SortType.Asc },
-				],
-				noDeps: true,
-				ignoreDeleted: true,
-			},
-			{
-				subId: J.Constant.subId.participant,
-				keys: this.participantRelationKeys(),
-				filters: [
-					{ relationKey: 'resolvedLayout', condition: I.FilterCondition.Equal, value: I.ObjectLayout.Participant },
-				],
-				sorts: [
-					{ relationKey: 'name', type: I.SortType.Asc },
-				],
-				ignoreDeleted: true,
-				ignoreHidden: false,
-				noDeps: true,
-			},
-		];
-
-		this.createSubscriptions(list, callBack);
-	};
-
-	createSubscriptions (list: any[], callBack?: () => void) {
-		let cnt = 0;
-		const cb = (item: any) => {
-			if (item.onSubscribe) {
-				item.onSubscribe();
-			};
-
-			cnt++;
-
-			if ((cnt == list.length) && callBack) {
-				callBack();
-			};
-		};
-
-		for (const item of list) {
-			this.searchSubscribe(item, () => cb(item));
-		};
-	};
-
-	destroySubscriptions (callBack?: () => void): void {
-		const ids = Object.values(J.Constant.subId);
-
-		C.ObjectSearchUnsubscribe(ids, callBack);
-		ids.forEach(id => Action.dbClearRoot(id));
-	};
-
-	profileRelationKeys () {
-		return J.Relation.default.concat('sharedSpacesLimit');
-	};
-
-	spaceRelationKeys () {
-		return J.Relation.default.concat(J.Relation.space).concat(J.Relation.participant);
-	};
-
-	typeRelationKeys () {
-		return J.Relation.default.concat(J.Relation.type).concat('lastUsedDate');
-	};
-
-	participantRelationKeys () {
-		return J.Relation.default.concat(J.Relation.participant);
-	};
-
-	syncStatusRelationKeys () {
-		return J.Relation.default.concat(J.Relation.syncStatus);
-	};
-
-	chatRelationKeys () {
-		return J.Relation.default.concat([ 'source', 'picture', 'widthInPixels', 'heightInPixels' ]);
+		U.Subscription.createGlobal(() => U.Space.openFirstSpaceOrVoid(null, param));
 	};
 
 	createSession (phrase: string, key: string, callBack?: (message: any) => void) {
-		C.WalletCreateSession(phrase, key, (message: any) => {
+		this.closeSession(() => {
+			C.WalletCreateSession(phrase, key, (message: any) => {
+				if (!message.error.code) {
+					S.Auth.tokenSet(message.token);
+					S.Auth.appTokenSet(message.appToken);
 
-			if (!message.error.code) {
-				S.Auth.tokenSet(message.token);
-				S.Auth.appTokenSet(message.appToken);
-				dispatcher.listenEvents();
+					dispatcher.startStream();
+				};
+
+				if (callBack) {
+					callBack(message);
+				};
+			});
+		});
+	};
+
+	closeSession (callBack?: () => void) {
+		const { token } = S.Auth;
+
+		if (!token) {
+			if (callBack) {
+				callBack();
 			};
+			return;
+		};
+
+		C.WalletCloseSession(token, () => {
+			S.Auth.tokenSet('');
+
+			dispatcher.stopStream();
 
 			if (callBack) {
-				callBack(message);
+				callBack();
 			};
 		});
 	};
@@ -529,7 +290,7 @@ class UtilData {
 
 	getObjectTypesForNewObject (param?: any) {
 		const { withSet, withCollection, limit } = param || {};
-		const { space, config } = S.Common;
+		const { space } = S.Common;
 		const pageLayouts = U.Object.getPageLayouts();
 		const skipLayouts = U.Object.getSetLayouts();
 		const pinned = Storage.getPinnedTypes();
@@ -542,6 +303,9 @@ class UtilData {
 				(it.spaceId == space) &&
 				(it.uniqueKey != J.Constant.typeKey.template);
 		}));
+
+		items = S.Record.checkHiddenObjects(items);
+		items.sort((c1, c2) => this.sortByPinnedTypes(c1, c2, pinned));
 
 		if (limit) {
 			items = items.slice(0, limit);
@@ -556,9 +320,6 @@ class UtilData {
 		};
 
 		items = items.filter(it => it);
-		items = S.Record.checkHiddenObjects(items);
-
-		items.sort((c1, c2) => this.sortByPinnedTypes(c1, c2, pinned));
 		return items;
 	};
 
@@ -572,14 +333,14 @@ class UtilData {
 			{ relationKey: 'targetObjectType', condition: I.FilterCondition.In, value: typeId },
 		];
 
-		this.search({
+		U.Subscription.search({
 			filters,
 			keys: [ 'id' ],
 			noDeps: true,
 		}, callBack);
 	};
 
-	checkDetails (rootId: string, blockId?: string, keys?: string[]) {
+	checkDetails (rootId: string, blockId?: string, keys?: string[]): any {
 		blockId = blockId || rootId;
 		keys = keys || [];
 
@@ -722,10 +483,13 @@ class UtilData {
 	checkObjectWithRelationCnt (relationKey: string, type: string, ids: string[], limit: number, callBack?: (message: any) => void) {
 		const filters: I.Filter[] = [
 			{ relationKey: 'type', condition: I.FilterCondition.Equal, value: type },
-			{ relationKey: relationKey, condition: I.FilterCondition.In, value: ids },
 		];
 
-		this.search({
+		if (relationKey && ids.length) {
+			filters.push({ relationKey: relationKey, condition: I.FilterCondition.In, value: ids });
+		};
+
+		U.Subscription.search({
 			filters,
 			limit,
 		}, (message: any) => {
@@ -775,231 +539,8 @@ class UtilData {
 		return [ I.CoverType.Upload, I.CoverType.Source ].includes(type);
 	};
 
-	searchDefaultFilters (param: any) {
-		const { config } = S.Common;
-		const { ignoreHidden, ignoreDeleted, ignoreArchived } = param;
-		const filters = param.filters || [];
-		const skipLayouts = [ I.ObjectLayout.Chat ];
-
-		filters.push({ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: skipLayouts });
-		filters.push({ relationKey: 'recommendedLayout', condition: I.FilterCondition.NotIn, value: skipLayouts });
-
-		if (ignoreHidden && !config.debug.hiddenObject) {
-			filters.push({ relationKey: 'isHidden', condition: I.FilterCondition.NotEqual, value: true });
-			filters.push({ relationKey: 'isHiddenDiscovery', condition: I.FilterCondition.NotEqual, value: true });
-		};
-
-		if (ignoreDeleted) {
-			filters.push({ relationKey: 'isDeleted', condition: I.FilterCondition.NotEqual, value: true });
-		};
-
-		if (ignoreArchived) {
-			filters.push({ relationKey: 'isArchived', condition: I.FilterCondition.NotEqual, value: true });
-		};
-
-		return filters;
-	};
-
-	onSubscribe (subId: string, idField: string, keys: string[], message: any) {
-		if (message.error.code) {
-			return;
-		};
-		if (message.counters) {
-			S.Record.metaSet(subId, '', { total: message.counters.total, keys });
-		};
-
-		const mapper = it => ({ id: it[idField], details: it });
-
-		let details = [];
-		if (message.dependencies && message.dependencies.length) {
-			details = details.concat(message.dependencies.map(mapper));
-		};
-		if (message.records && message.records.length) {
-			details = details.concat(message.records.map(mapper));
-		};
-
-		S.Detail.set(subId, details);
-		S.Record.recordsSet(subId, '', message.records.map(it => it[idField]).filter(it => it));
-	};
-
-	mapKeys (param: Partial<I.SearchSubscribeParam>) {
-		const keys: string[] = [ ...new Set(param.keys as string[]) ];
-
-		if (!keys.includes(param.idField)) {
-			keys.push(param.idField);
-		};
-
-		if (keys.includes('layout')) {
-			keys.push('resolvedLayout');
-		};
-
-		return keys;
-	};
-
-	searchSubscribe (param: Partial<I.SearchSubscribeParam>, callBack?: (message: any) => void) {
-		const { space } = S.Common;
-
-		param = Object.assign({
-			spaceId: space,
-			subId: '',
-			idField: 'id',
-			filters: [],
-			sorts: [],
-			keys: J.Relation.default,
-			sources: [],
-			offset: 0,
-			limit: 0,
-			ignoreHidden: true,
-			ignoreDeleted: true,
-			ignoreArchived: true,
-			noDeps: false,
-			afterId: '',
-			beforeId: '',
-			collectionId: ''
-		}, param);
-
-		const { spaceId, subId, idField, sorts, sources, offset, limit, afterId, beforeId, noDeps, collectionId } = param;
-		const keys = this.mapKeys(param);
-		const filters = this.searchDefaultFilters(param);
-
-		if (!subId) {
-			console.error('[U.Data].searchSubscribe: subId is empty');
-
-			if (callBack) {
-				callBack({ error: { code: 1, description: 'subId is empty' } });
-			};
-			return;
-		};
-
-		if (!spaceId) {
-			console.error('[U.Data].searchSubscribe: spaceId is empty');
-
-			if (callBack) {
-				callBack({ error: { code: 1, description: 'spaceId is empty' } });
-			};
-			return;
-		};
-
-		C.ObjectSearchSubscribe(spaceId, subId, filters, sorts.map(this.sortMapper), keys, sources, offset, limit, afterId, beforeId, noDeps, collectionId, (message: any) => {
-			this.onSubscribe(subId, idField, keys, message);
-
-			if (callBack) {
-				callBack(message);
-			};
-		});
-	};
-
-	subscribeIds (param: any, callBack?: (message: any) => void) {
-		const { space } = S.Common;
-
-		param = Object.assign({
-			spaceId: space,
-			subId: '',
-			ids: [],
-			keys: J.Relation.default,
-			noDeps: false,
-			idField: 'id',
-		}, param);
-
-		const { spaceId, subId, noDeps } = param;
-		const ids = U.Common.arrayUnique(param.ids.filter(it => it));
-		const keys = this.mapKeys(param);
-
-		if (!subId) {
-			console.error('[U.Data].subscribeIds: subId is empty');
-
-			if (callBack) {
-				callBack({ error: { code: 1, description: 'subId is empty' } });
-			};
-			return;
-		};
-
-		if (!spaceId) {
-			console.error('[U.Data].subscribeIds: spaceId is empty');
-
-			if (callBack) {
-				callBack({ error: { code: 1, description: 'spaceId is empty' } });
-			};
-			return;
-		};
-
-		if (!ids.length) {
-			console.error('[U.Data].subscribeIds: ids list is empty');
-
-			if (callBack) {
-				callBack({ error: { code: 1, description: 'ids list is empty' } });
-			};
-			return;
-		};
-
-		C.ObjectSubscribeIds(spaceId, subId, ids, keys, noDeps, (message: any) => {
-			(message.records || []).sort((c1: any, c2: any) => {
-				const i1 = ids.indexOf(c1.id);
-				const i2 = ids.indexOf(c2.id);
-				if (i1 > i2) return 1; 
-				if (i1 < i2) return -1;
-				return 0;
-			});
-
-			this.onSubscribe(subId, 'id', keys, message);
-
-			if (callBack) {
-				callBack(message);
-			};
-		});
-	};
-
-	search (param: Partial<I.SearchSubscribeParam> & { fullText?: string }, callBack?: (message: any) => void) {
-		const { space } = S.Common;
-
-		param = Object.assign({
-			spaceId: space,
-			idField: 'id',
-			fullText: '',
-			filters: [],
-			sorts: [],
-			keys: J.Relation.default,
-			offset: 0,
-			limit: 0,
-			ignoreHidden: true,
-			ignoreDeleted: true,
-			ignoreArchived: true,
-			skipLayoutFormat: null,
-		}, param);
-
-		const { spaceId, sorts, offset, limit, skipLayoutFormat } = param;
-		const keys = this.mapKeys(param);
-		const filters = this.searchDefaultFilters(param);
-
-		if (!spaceId) {
-			console.error('[U.Data].search: spaceId is empty');
-
-			if (callBack) {
-				callBack({ error: { code: 1, description: 'spaceId is empty' } });
-			};
-			return;
-		};
-
-		C.ObjectSearch(spaceId, filters, sorts.map(this.sortMapper), keys, param.fullText, offset, limit, (message: any) => {
-			if (message.records) {
-				message.records = message.records.map(it => S.Detail.mapper(it, skipLayoutFormat));
-			};
-
-			if (callBack) {
-				callBack(message);
-			};
-		});
-	};
-
-	sortMapper (it: any) {
-		if (undefined === it.includeTime) {
-			it.includeTime = SYSTEM_DATE_RELATION_KEYS.includes(it.relationKey);
-		};
-		return it;
-	};
-
 	setWindowTitle (rootId: string, objectId: string) {
-		this.setWindowTitleText(U.Object.name(S.Detail.get(rootId, objectId, [])));
+		this.setWindowTitleText(U.Object.name(S.Detail.get(rootId, objectId, []), true));
 	};
 
 	setWindowTitleText (name: string) {
@@ -1018,15 +559,15 @@ class UtilData {
 		document.title = title.join(' - ');
 	};
 
-	graphFilters () {
+	getGraphFilters () {
 		return [
 			{ relationKey: 'isHidden', condition: I.FilterCondition.NotEqual, value: true },
 			{ relationKey: 'isHiddenDiscovery', condition: I.FilterCondition.NotEqual, value: true },
 			{ relationKey: 'isArchived', condition: I.FilterCondition.NotEqual, value: true },
 			{ relationKey: 'isDeleted', condition: I.FilterCondition.NotEqual, value: true },
-			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getFileAndSystemLayouts() },
+			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getGraphSkipLayouts() },
 			{ relationKey: 'id', condition: I.FilterCondition.NotEqual, value: J.Constant.anytypeProfileId },
-			{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template }
+			{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template ] }
 		];
 	};
 
@@ -1065,7 +606,7 @@ class UtilData {
 		});
 	};
 
-	getMembershipTiers (noCache: boolean) {
+	getMembershipTiers (noCache: boolean, callBack?: () => void) {
 		const { config, interfaceLang, isOnline } = S.Common;
 		const { testPayment } = config;
 
@@ -1080,6 +621,10 @@ class UtilData {
 
 			const tiers = message.tiers.filter(it => (it.id == I.TierType.Explorer) || (it.isTest == !!testPayment));
 			S.Common.membershipTiersListSet(tiers);
+
+			if (callBack) {
+				callBack();
+			};
 		});
 	};
 
@@ -1110,35 +655,45 @@ class UtilData {
 
 		analytics.event('StartCreateAccount');
 
-		C.WalletCreate(dataPath, (message) => {
-			if (message.error.code) {
-				onError(message.error.description);
-				return;
-			};
-
-			phrase = message.mnemonic;
-
-			this.createSession(phrase, '', (message) => {
+		this.closeSession(() => {
+			C.WalletCreate(dataPath, (message) => {
 				if (message.error.code) {
 					onError(message.error.description);
 					return;
 				};
 
-				C.AccountCreate('', '', dataPath, U.Common.rand(1, J.Constant.count.icon), mode, path, (message) => {
+				phrase = message.mnemonic;
+
+				this.createSession(phrase, '', (message) => {
 					if (message.error.code) {
 						onError(message.error.description);
 						return;
 					};
 
-					S.Auth.accountSet(message.account);
-					S.Common.configSet(message.account.config, false);
+					C.AccountCreate('', '', dataPath, U.Common.rand(1, J.Constant.count.icon), mode, path, (message) => {
+						if (message.error.code) {
+							onError(message.error.description);
+							return;
+						};
 
-					this.onInfo(message.account.info);
-					Renderer.send('keytarSet', message.account.id, phrase);
-					Action.importUsecase(S.Common.space, I.Usecase.GetStarted, callBack);
+						S.Auth.accountSet(message.account);
+						S.Common.configSet(message.account.config, false);
 
-					analytics.event('CreateAccount', { middleTime: message.middleTime });
-					analytics.event('CreateSpace', { middleTime: message.middleTime, usecase: I.Usecase.GetStarted });
+						this.onInfo(message.account.info);
+						Renderer.send('keytarSet', message.account.id, phrase);
+						Action.importUsecase(S.Common.space, I.Usecase.GetStarted, (message: any) => {
+							if (message.startingId) {
+								S.Auth.startingId = message.startingId;
+							};
+
+							if (callBack) {
+								callBack();
+							};
+						});
+
+						analytics.event('CreateAccount', { middleTime: message.middleTime });
+						analytics.event('CreateSpace', { middleTime: message.middleTime, usecase: I.Usecase.GetStarted });
+					});
 				});
 			});
 		});
@@ -1229,15 +784,10 @@ class UtilData {
 	};
 
 	getLayoutWidth (rootId: string): number {
-		const object = S.Detail.get(rootId, rootId, [ 'type' ], true);
-		const type = S.Record.getTypeById(object.type);
+		const object = S.Detail.get(rootId, rootId, [ 'type', 'targetObjectType' ], true);
+		const type = S.Record.getTypeById(object.targetObjectType || object.type);
 		const root = S.Block.getLeaf(rootId, rootId);
-
-		let ret = type?.layoutWidth;
-
-		if (undefined !== root?.fields?.width) {
-			ret = root?.fields?.width;
-		};
+		const ret = undefined !== root?.fields?.width ? root?.fields?.width : type?.layoutWidth;
 
 		return Number(ret) || 0;
 	};
@@ -1257,6 +807,26 @@ class UtilData {
 			{ blockId: block.id, fields: { ...fields, isRtlDetected: true } } 
 		], () => {
 			C.BlockListSetAlign(rootId, [ block.id ], I.BlockHAlign.Right);
+		});
+	};
+
+	getConflictRelations (rootId: string, callBack: (ids: string[]) => void) {
+		if (!rootId) {
+			console.error('[U.Data].getConflictRelations: No rootId');
+			return;
+		};
+
+		C.ObjectTypeListConflictingRelations(rootId, S.Common.space, (message) => {
+			if (message.error.code) {
+				return;
+			};
+
+			const ids = S.Record.checkHiddenObjects(Relation.getArrayValue(message.conflictRelationIds)
+				.map(id => S.Record.getRelationById(id))).map(it => it.id).filter(it => it);
+
+			if (callBack) {
+				callBack(ids);
+			};
 		});
 	};
 

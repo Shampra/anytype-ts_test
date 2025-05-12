@@ -116,9 +116,7 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 
 				if (item.isObject) {
 					item.object = { 
-						name: item.name,
-						iconEmoji: item.iconEmoji, 
-						decription: item.description,
+						...item,
 						layout: I.ObjectLayout.Type,
 					};
 					item.iconSize = 40;
@@ -462,6 +460,7 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 				menuParam.data = Object.assign(menuParam.data, {
 					canAdd: true,
 					type: I.NavigationType.Link,
+					withPlural: true,
 				});
 				break;
 			};
@@ -481,6 +480,7 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 			case 'turnObject': {
 				menuId = 'typeSuggest';
 				menuParam.data = Object.assign(menuParam.data, {
+					canAdd: true,
 					filter: '',
 					filters: [
 						{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts() },

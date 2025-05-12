@@ -21,6 +21,7 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 		this.onChange = this.onChange.bind(this);
 		this.onSave = this.onSave.bind(this);
 		this.onCancel = this.onCancel.bind(this);
+		this.disableButton = this.disableButton.bind(this);
 	};
 
     render () {
@@ -46,8 +47,8 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 						<Button 
 							ref={ref => this.buttonSaveRef = ref} 
-							text={type ? translate('commonSave') : translate('commonCreate')}
-							className="c28" 
+							text={type ? translate('commonSave') : translate('commonApply')}
+							className="c28 disabled"
 							onClick={this.onSave}
 						/>
 					</div>
@@ -59,10 +60,12 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 							{...this.props} 
 							ref={ref => this.sectionRefs.set(item.id, ref)}
 							key={item.id} 
+							id={item.id}
 							component={item.component}
 							object={this.object} 
 							withState={true}
 							onChange={this.onChange}
+							disableButton={this.disableButton}
 							readonly={readonly}
 						/>
 					))}
@@ -82,11 +85,12 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 		analytics.event('ScreenEditType', { route: noPreview ? analytics.route.object : analytics.route.type });
 	};
 
+	componentWillUnmount (): void {
+		this.disableScroll(false);
+	}; 
+
 	init () {
-		const { isPopup } = this.props;
-		const container = U.Common.getPageFlexContainer(isPopup);
 		const type = this.getObject();
-		const sections = this.getSections();
 		const details: any = this.props.details || {};
 		const newType = Object.assign({
 			recommendedLayout: I.ObjectLayout.Page,
@@ -100,10 +104,22 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 		this.object = U.Common.objectCopy(details.isNew ? newType : type || newType);
 		this.backup = U.Common.objectCopy(this.object);
 
-		sections.forEach(it => this.updateObject(it.id));
-		container.addClass('overPopup');
+		this.updateSections();
+		this.disableScroll(true);
+		this.disableButton(true);
+	};
 
-		$(this.buttonSaveRef.getNode()).addClass('disabled');
+	disableButton (v: boolean) {
+		if (this.buttonSaveRef) {
+			$(this.buttonSaveRef.getNode()).toggleClass('disabled', v);
+		};
+	};
+
+	disableScroll (v: boolean) {
+		const { isPopup } = this.props;
+		const container = isPopup ? U.Common.getScrollContainer(isPopup) : $('body');
+
+		container.toggleClass('overPopup', v);
 	};
 	
 	getObject () {
@@ -123,13 +139,13 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 		return [
 			{ id: 'title', component: 'type/title' },
+			{ id: 'plural', component: 'type/title' },
 			!isFile ? { id: 'layout', component: 'type/layout' } : null,
 			{ id: 'relation', component: 'type/relation' },
 		].filter(it => it);
 	};
 
 	onChange (update: any) {
-		const sections = this.getSections();
 		const skipFormat = [ 'defaultTypeId' ];
 
 		for (const relationKey in update) {
@@ -147,16 +163,12 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 		S.Detail.update(J.Constant.subId.type, { id: this.object.id, details: update }, false);
 
-		if (undefined !== update.recommendedLayout) {
+		if ((undefined !== update.recommendedLayout) && !U.Object.isTypeLayout(this.object.layout)) {
 			this.updateLayout(update.recommendedLayout);
 		};
 
-		sections.forEach(it => {
-			this.updateObject(it.id);
-			this.forceUpdate();
-		});
-
-		$(this.buttonSaveRef.getNode()).toggleClass('disabled', !U.Common.objectLength(this.update));
+		this.updateSections();
+		this.disableButton(!U.Common.objectLength(this.update) || (!this.object.name && !this.object.pluralName));
 
 		// analytics
 		let eventId = '';
@@ -172,12 +184,9 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 	updateLayout (layout: I.ObjectLayout) {
 		const rootId = keyboard.getRootId();
-		const root = S.Block.getLeaf(rootId, rootId);
 		const current = S.Detail.get(rootId, rootId);
 
-		if (root) {
-			S.Block.update(rootId, rootId, { layout });
-		};
+		S.Block.update(rootId, rootId, { layout });
 
 		if (!current._empty_) {
 			S.Detail.update(rootId, { id: rootId, details: { resolvedLayout: layout } }, false);
@@ -185,13 +194,14 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 	};
 
 	onSave () {
-		if (!U.Common.objectLength(this.update)) {
-			return;
-		};
-
 		const { space } = S.Common;
 		const { rootId, isPopup, previous } = this.props;
+		const details: any = this.props.details || {};
 		const type = S.Record.getTypeType();
+
+		if (!U.Common.objectLength(this.update) || (!this.object.name && !this.object.pluralName)) {
+			return;
+		};
 
 		if (rootId) {
 			const update = [];
@@ -202,9 +212,11 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 			};
 
 			if (update.length) {
-				C.ObjectListSetDetails([ rootId ], update);
+				C.ObjectListSetDetails([ rootId ], update, () => {
+					C.BlockDataviewRelationSet(rootId, J.Constant.blockId.dataview, [ 'name', 'description' ].concat(U.Object.getTypeRelationKeys(rootId)));
+				});
 
-				if (previous) {
+				if (previous && previous.page) {
 					sidebar.rightPanelSetState(isPopup, previous);
 				} else {
 					this.close();
@@ -213,8 +225,13 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 		} else {
 			C.ObjectCreate(this.object, [], '', type.uniqueKey, space, (message) => {
 				if (!message.error.code) {
+					const route = details.data && details.data.route ? details.data.route : '';
+					const format = I.LayoutFormat[this.object.layoutFormat];
+
 					U.Object.openRoute(message.details);
 					S.Common.getRef('sidebarLeft')?.refChild?.refFilter?.setValue('');
+
+					analytics.event('CreateObject', { objectType: J.Constant.typeKey.type, route, format });
 				};
 			});
 
@@ -228,12 +245,22 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 	};
 
 	onCancel () {
+		const { isPopup, previous } = this.props;
+		const rootId = keyboard.getRootId();
+
 		if (U.Common.objectLength(this.update)) {
 			S.Detail.update(J.Constant.subId.type, { id: this.backup.id, details: this.backup }, false);
-			this.updateLayout(this.backup.recommendedLayout);
+
+			if ((rootId != this.backup.id) && !U.Object.isTypeLayout(this.backup.layout)) {
+				this.updateLayout(this.backup.recommendedLayout);
+			};
 		};
 
-		this.close();
+		if (previous && previous.page) {
+			sidebar.rightPanelSetState(isPopup, previous);
+		} else {
+			this.close();
+		};
 	};
 
 	close () {
@@ -241,8 +268,14 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 		sidebar.rightPanelToggle(false, true, this.props.isPopup);
 	};
 
-	updateObject (id: string) {
-		this.sectionRefs.get(id)?.setObject(this.object);
+	updateSections () {
+		const sections = this.getSections();
+
+		sections.forEach(it => {
+			this.sectionRefs.get(it.id)?.setObject(this.object);
+		});
+
+		this.forceUpdate();
 		this.previewRef?.update(this.object);
 	};
 

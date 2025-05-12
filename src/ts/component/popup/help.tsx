@@ -9,12 +9,14 @@ const LIMIT = 1;
 
 const PopupHelp = forwardRef<{}, I.Popup>((props, ref) => {
 
-	const { getId, param, position } = props;
+	const { getId, param } = props;
 	const { data } = param;
 	const [ page, setPage ] = useState(0);
 	const nodeRef = useRef(null);
 	const document = U.Common.toUpperCamelCase(data.document);
-	const blocks = Docs.Help[document] || [];
+	const f = Docs.Help[document];
+
+	const blocks = 'function' == typeof f ? f() : f;
 	const title = blocks.find(it => it.style == I.TextStyle.Title);
 	const cover = blocks.find(it => it.type == I.BlockType.Cover);
 	const isWhatsNew = document == 'WhatsNew';

@@ -283,7 +283,7 @@ export const FileUpload = (spaceId: string, url: string, path: string, type: I.F
 	request.setLocalpath(path);
 	request.setType(type as number);
 	request.setDetails(Encode.struct(details));
-	request.setCreatetypewidgetifmissing(config.experimental);
+	request.setCreatetypewidgetifmissing(true);
 
 	dispatcher.request(FileUpload.name, request, callBack);
 };
@@ -1140,6 +1140,16 @@ export const BlockRelationSetKey = (contextId: string, blockId: string, relation
 	dispatcher.request(BlockRelationSetKey.name, request, callBack);
 };
 
+export const BlockDataviewRelationSet = (contextId: string, blockId: string, relationKeys: string[], callBack?: (message: any) => void) => {
+	const request = new Rpc.BlockDataview.Relation.Set.Request();
+
+	request.setContextid(contextId);
+	request.setBlockid(blockId);
+	request.setRelationkeysList(relationKeys);
+
+	dispatcher.request(BlockDataviewRelationSet.name, request, callBack);
+};
+
 export const BlockDataviewRelationAdd = (contextId: string, blockId: string, relationKeys: string[], callBack?: (message: any) => void) => {
 	const request = new Rpc.BlockDataview.Relation.Add.Request();
 
@@ -1259,10 +1269,17 @@ export const ObjectTypeListConflictingRelations = (id: string, spaceId: string, 
 	dispatcher.request(ObjectTypeListConflictingRelations.name, request, callBack);
 };
 
+export const ObjectTypeResolveLayoutConflicts = (id: string, callBack?: (message: any) => void) => {
+	const request = new Rpc.ObjectType.ResolveLayoutConflicts.Request();
+
+	request.setTypeobjectid(id);
+
+	dispatcher.request(ObjectTypeResolveLayoutConflicts.name, request, callBack);
+};
+
 // ---------------------- OBJECT ---------------------- //
 
 export const ObjectCreate = (details: any, flags: I.ObjectFlag[], templateId: string, typeKey: string, spaceId: string, callBack?: (message: any) => void) => {
-	const { config } = S.Common;
 	const request = new Rpc.Object.Create.Request();
 
 	request.setDetails(Encode.struct(details));
@@ -1270,7 +1287,7 @@ export const ObjectCreate = (details: any, flags: I.ObjectFlag[], templateId: st
 	request.setTemplateid(templateId);
 	request.setSpaceid(spaceId);
 	request.setObjecttypeuniquekey(typeKey || J.Constant.default.typeKey);
-	request.setCreatetypewidgetifmissing(config.experimental);
+	request.setCreatetypewidgetifmissing(true);
 
 	dispatcher.request(ObjectCreate.name, request, callBack);
 };
@@ -1566,9 +1583,16 @@ export const ObjectListModifyDetailValues = (objectIds: string[], operations: an
 		const op = new Rpc.Object.ListModifyDetailValues.Request.Operation();
 
 		op.setRelationkey(it.relationKey);
-		op.setAdd(Encode.value(it.add));
-		op.setSet(Encode.value(it.set));
-		op.setRemove(Encode.value(it.remove));
+
+		if (it.add) {
+			op.setAdd(Encode.value(it.add));
+		};
+		if (it.set || (it.set === null)) {
+			op.setSet(Encode.value(it.set));
+		};
+		if (it.remove) {
+			op.setRemove(Encode.value(it.remove));
+		};
 
 		return op;
 	}));
@@ -2263,30 +2287,62 @@ export const ChatDeleteMessage = (objectId: string, messageId: string, callBack?
 
 };
 
-export const ChatGetMessages = (objectId: string, beforeOrderId: string, afterOrderId: string, limit: number, callBack?: (message: any) => void) => {
+export const ChatGetMessages = (objectId: string, beforeOrderId: string, afterOrderId: string, limit: number, includeBoundary: boolean, callBack?: (message: any) => void) => {
 	const request = new Rpc.Chat.GetMessages.Request();
 
 	request.setChatobjectid(objectId);
 	request.setBeforeorderid(beforeOrderId);
 	request.setAfterorderid(afterOrderId);
 	request.setLimit(limit);
+	request.setIncludeboundary(includeBoundary);
 
 	dispatcher.request(ChatGetMessages.name, request, callBack);
 };
 
-export const ChatSubscribeLastMessages = (objectId: string, limit: number, callBack?: (message: any) => void) => {
+export const ChatReadMessages = (objectId: string, afterOrderId: string, beforeOrderId: string, lastStateId: string, type: I.ChatReadType, callBack?: (message: any) => void) => {
+	const request = new Rpc.Chat.ReadMessages.Request();
+
+	request.setChatobjectid(objectId);
+	request.setBeforeorderid(beforeOrderId);
+	request.setAfterorderid(afterOrderId);
+	request.setLaststateid(lastStateId);
+	request.setType(type as number);
+
+	dispatcher.request(ChatReadMessages.name, request, callBack);
+};
+
+export const ChatUnreadMessages = (objectId: string, afterOrderId: string, callBack?: (message: any) => void) => {
+	const request = new Rpc.Chat.Unread.Request();
+
+	request.setChatobjectid(objectId);
+	request.setAfterorderid(afterOrderId);
+
+	dispatcher.request(ChatUnreadMessages.name, request, callBack);
+};
+
+export const ChatSubscribeLastMessages = (objectId: string, limit: number, subId: string, callBack?: (message: any) => void) => {
 	const request = new Rpc.Chat.SubscribeLastMessages.Request();
 
 	request.setChatobjectid(objectId);
 	request.setLimit(limit);
+	request.setSubid(subId);
 
 	dispatcher.request(ChatSubscribeLastMessages.name, request, callBack);
 };
 
-export const ChatUnsubscribe = (objectId: string, callBack?: (message: any) => void) => {
+export const ChatSubscribeToMessagePreviews = (subId: string, callBack?: (message: any) => void) => {
+	const request = new Rpc.Chat.SubscribeToMessagePreviews.Request();
+
+	request.setSubid(subId);
+
+	dispatcher.request(ChatSubscribeToMessagePreviews.name, request, callBack);
+};
+
+export const ChatUnsubscribe = (objectId: string, subId: string, callBack?: (message: any) => void) => {
 	const request = new Rpc.Chat.Unsubscribe.Request();
 
 	request.setChatobjectid(objectId);
+	request.setSubid(subId);
 
 	dispatcher.request(ChatUnsubscribe.name, request, callBack);
 };

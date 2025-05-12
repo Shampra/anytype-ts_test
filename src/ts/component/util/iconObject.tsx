@@ -4,6 +4,10 @@ import { observer } from 'mobx-react';
 import { IconEmoji } from 'Component';
 import { I, S, U, J, Preview, translate, Relation } from 'Lib';
 
+interface IconParam {
+	userIcon?: string;
+};
+
 interface Props {
 	id?: string;
 	layout?: I.ObjectLayout;
@@ -14,17 +18,15 @@ interface Props {
 	asImage?: boolean;
 	size?: number;
 	iconSize?: number;
-	offsetX?: number;
-	offsetY?: number;
 	menuId?: string;
-	tooltip?: string;
-	tooltipY?: I.MenuDirection.Top | I.MenuDirection.Bottom;
 	noGallery?: boolean;
 	noUpload?: boolean;
 	noRemove?: boolean;
 	noClick?: boolean;
 	menuParam?: Partial<I.MenuParam>;
+	tooltipParam?: Partial<I.TooltipParam>;
 	style?: any;
+	param?: IconParam;
 	getObject?(): any;
 	onSelect?(id: string): void;
 	onIconSelect?(id: string, color: number): void;
@@ -41,7 +43,6 @@ interface IconObjectRefProps {
 
 const LAYOUTS_WITH_EMOJI_GALLERY = [ 
 	I.ObjectLayout.Page, 
-	I.ObjectLayout.Type,
 	I.ObjectLayout.SpaceView,
 	I.ObjectLayout.Human,
 	I.ObjectLayout.Chat,
@@ -117,14 +118,12 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		className = '',
 		canEdit = false,
 		size = 20,
-		offsetX = 0,
-		offsetY = 0,
-		tooltip = '',
-		tooltipY = I.MenuDirection.Bottom,
 		noRemove = false,
 		noClick = false,
 		menuParam = {},
+		tooltipParam = {},
 		style = {},
+		param = {},
 		getObject,
 		onSelect,
 		onIconSelect,
@@ -149,6 +148,7 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 
 	const layout = Number(object.layout) || I.ObjectLayout.Page;
 	const { id, name, iconName, iconEmoji, iconImage, iconOption, done, relationFormat, relationKey, isDeleted } = object || {};
+	const { userIcon } = param;
 	const cn = [ 'iconObject', `c${size}`, className, U.Data.layoutClass(object.id, layout) ];
 	const iconSize = props.iconSize || IconSize[size];
 
@@ -166,8 +166,11 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 	};
 
 	const onMouseEnterHandler = (e: any) => {
-		if (tooltip) {
-			Preview.tooltipShow({ text: tooltip, element: $(nodeRef.current), typeY: tooltipY });
+		const { text = '', caption = '' } = tooltipParam;
+		const t = Preview.tooltipCaption(text, caption);
+		
+		if (t) {
+			Preview.tooltipShow({ ...tooltipParam, text: t, element: $(nodeRef.current) });
 		};
 
 		if (canEdit && U.Object.isTaskLayout(object.layout)) {
@@ -226,13 +229,11 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		e.stopPropagation();
 
 		const noGallery = props.noGallery || [ I.ObjectLayout.SpaceView, I.ObjectLayout.Human, I.ObjectLayout.Type ].includes(object.layout);
-		const noUpload = props.noUpload || [ I.ObjectLayout.Type ].includes(object.layout);
+		const noUpload = props.noUpload;
 		const withIcons = U.Object.isTypeLayout(object.layout);
 
 		S.Menu.open('smile', { 
 			element: `#${props.id}`,
-			offsetX,
-			offsetY,
 			data: {
 				value: (object.iconEmoji || object.iconImage || ''),
 				spaceId: object.spaceId,
@@ -275,12 +276,9 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 	};
 
 	const userSvg = (): string => {
-		const color = J.Theme[theme]?.iconUser;
-		const circle = `<circle cx="50%" cy="50%" r="50%" fill="${color.bg}" />`;
-		const text = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="${color.text}" font-family="Inter, Helvetica" font-weight="${fontWeight(size)}" font-size="${fontSize(size)}px">${nameString()}</text>`;
+		const text = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="${userIcon || J.Theme[theme]?.iconUser}" font-family="Inter, Helvetica" font-weight="${fontWeight(size)}" font-size="${fontSize(size)}px">${nameString()}</text>`;
 		const svg = `
 			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 ${size} ${size}" xml:space="preserve" height="${size}px" width="${size}px">
-				${circle}
 				${text}
 			</svg>
 		`;
@@ -288,13 +286,8 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 	};
 
-	const bgByOption = (option: number) => {
-		const { bg, list } = J.Theme.icon;
-		return bg[list[option - 1]];
-	};
-
 	const spaceSvg = (option: number): string => {
-		const bgColor = bgByOption(option);
+		const bgColor = U.Common.iconBgByOption(option);
 		const text = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter, Helvetica" font-weight="${fontWeight(size)}" font-size="${fontSize(size)}px">${nameString()}</text>`;
 		const svg = `
 			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 ${size} ${size}" xml:space="preserve" height="${size}px" width="${size}px">
@@ -315,13 +308,13 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 	};
 
 	const defaultIcon = (id: string) => {
-		const type = S.Detail.get(J.Constant.subId.type, object.type, [ 'iconName' ], true);
+		const type = S.Detail.get(J.Constant.subId.type, object.type, [ 'name', 'iconName' ], true);
 
 		let src = '';
 		if (type.iconName) {
-			src = typeIcon(type.iconName, 1, J.Theme[theme].iconDefault);
+			src = U.Object.typeIcon(type.iconName, 1, size, J.Theme[theme].iconDefault);
 		} else {
-			src = require(`img/icon/default/${id}.svg`);
+			src = U.Common.updateSvg(require(`img/icon/default/${id}.svg`), { id, size, fill: J.Theme[theme].iconDefault });
 		};
 
 		cn.push('withDefault');
@@ -329,23 +322,17 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		icon = <img src={src} className={icn.join(' ')} />;
 	};
 
-	const typeIcon = (id: string, option: number, color?: string) => {
-		const newColor = color || bgByOption(option);
-		return U.Common.updateSvg(require(`img/icon/type/default/${id}.svg`), { id, size, fill: newColor });
-	};
-
 	switch (layout) {
-		default:
-		case I.ObjectLayout.Chat:
-		case I.ObjectLayout.Page: {
+		default: {
 			if (iconImage) {
 				cn.push('withImage');
 			};
 
 			let di = 'page';
 			switch (layout) {
+				case I.ObjectLayout.ChatOld:
 				case I.ObjectLayout.Chat: di = 'chat'; break;
-				case I.ObjectLayout.Collection: 
+				case I.ObjectLayout.Collection: di = 'collection'; break;
 				case I.ObjectLayout.Set: di = 'set'; break;
 			};
 
@@ -390,8 +377,13 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		};
 
 		case I.ObjectLayout.Type: {
+			if (iconImage) {
+				icn = icn.concat([ 'iconImage', 'c' + size ]);
+				cn.push('withImage');
+				icon = <img src={S.Common.imageUrl(iconImage, size * 2)} className={icn.join(' ')} />;
+			} else
 			if (iconName) {
-				const src = typeIcon(iconName, iconOption);
+				const src = U.Object.typeIcon(iconName, iconOption, size);
 
 				icn = icn.concat([ 'iconCommon', 'c' + iconSize ]);
 				icon = <img src={src} className={icn.join(' ')} data-id={iconName} />;
@@ -405,7 +397,7 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		};
 
 		case I.ObjectLayout.Relation: {
-			if ([ I.RelationType.Icon, I.RelationType.Relations ].includes(relationFormat)) {
+			if ([ I.RelationType.Icon ].includes(relationFormat)) {
 				break;
 			};
 
@@ -466,12 +458,20 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 
 	const setErrorIcon = () => {
 		const node = $(nodeRef.current);
-		const img = node.find('img');
+		const img = $('<img />');
 
 		img.attr({ 
 			src: U.Common.updateSvg(require('img/icon/error.svg'), { id: 'error', size, fill: J.Theme[theme]?.iconDefault }), 
-			class: `iconCommon c${IconSize[size]}`
+			class: `iconError c${IconSize[size]}`,
 		});
+		node.append(img).addClass('withImageError');
+	};
+
+	const unsetErrorIcon = () => {
+		const node = $(nodeRef.current);
+
+		node.find('.iconError').remove();
+		node.removeClass('withImageError');
 	};
 
 	useEffect(() => {
@@ -479,15 +479,8 @@ const IconObject = observer(forwardRef<IconObjectRefProps, Props>((props, ref) =
 		const img = node.find('img');
 
 		img.off('error load');
-
-		img.on('error', () => {
-			node.addClass('withImageError');
-			setErrorIcon();
-		});
-
-		img.on('load', () => {
-			node.removeClass('withImageError');
-		});
+		img.on('load', () => unsetErrorIcon());
+		img.on('error', () => setErrorIcon());
 	}, []);
 
 	useEffect(() => {

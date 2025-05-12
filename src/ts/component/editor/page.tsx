@@ -151,8 +151,6 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		this.rebind();
 		this.open();
 		this.initNodes();
-
-		keyboard.disableClose(false);
 	};
 
 	componentDidUpdate () {
@@ -271,16 +269,8 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			return;
 		};
 
-		const { isPopup } = this.props;
-		const match = keyboard.getMatch(isPopup);
-
-		let close = true;
-		if (isPopup && (match?.params?.id == this.id)) {
-			close = false;
-		};
-		if (keyboard.isCloseDisabled) {
-			close = false;
-		};
+		const { isPopup, matchPopup } = this.props;
+		const close = !isPopup || (isPopup && (matchPopup?.params?.id != this.id));
 
 		if (close) {
 			Action.pageClose(this.id, true);
@@ -469,7 +459,15 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		};
 
 		const { pageX, pageY } = e;
-		const blocks = S.Block.getBlocks(rootId, it => it.canCreateBlock());
+		const blocks = S.Block.getBlocks(rootId, it => it.canCreateBlock()).sort((c1, c2) => {
+			const l1 = c1.isLayout();
+			const l2 = c2.isLayout();
+
+			if (l1 && !l2) return -1;
+			if (!l1 && l2) return 1;
+
+			return 0;
+		});
 
 		let offset = 140;
 		let hovered: any = null;
@@ -497,6 +495,10 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 				this.hoverId = block.id;
 				hovered = obj;
 				hoveredRect = rect;
+
+				if (block.isLayout() && (pageX < rect.x) || (pageX > rect.x + J.Size.blockMenu)) {
+					continue;
+				};
 			};
 		};
 
@@ -577,7 +579,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		let ret = false;
 
 		// Select all
-		keyboard.shortcut(`${cmd}+a`, e, () => {
+		keyboard.shortcut('selectAll', e, () => {
 			if (popupOpen || menuOpen) {
 				return;
 			};
@@ -732,7 +734,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			});
 
 			// Move blocks with arrows
-			keyboard.shortcut(`${cmd}+shift+arrowup, ${cmd}+shift+arrowdown`, e, (pressed: string) => {
+			keyboard.shortcut(`moveSelectionUp, moveSelectionDown`, e, (pressed: string) => {
 				this.onCtrlShiftArrowEditor(e, pressed);
 
 				ret = true;
@@ -750,7 +752,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		});
 
 		// Indent block
-		keyboard.shortcut('tab, shift+tab', e, (pressed: string) => {
+		keyboard.shortcut('indent, outdent', e, (pressed: string) => {
 			this.onTabEditor(e, ids, pressed);
 
 			ret = true;
@@ -788,18 +790,22 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		});
 
 		if (!ret && ids.length && !keyboard.isSpecial(e)) {
-			this.blockCreate(ids[ids.length - 1] , I.BlockPosition.Bottom, {
+			const param = {
 				type: I.BlockType.Text,
 				style: I.TextStyle.Paragraph,
-			}, (blockId: string) => {
+			};
+
+			C.BlockCreate(rootId, ids[ids.length - 1], I.BlockPosition.Bottom, param, (message: any) => {
 				const key = e.key;
+				const blockId = message.blockId;
 
 				C.BlockListDelete(rootId, ids);
 				U.Data.blockSetText(rootId, blockId, key, [], true, () => {
-					const block = S.Block.getLeaf(rootId, blockId);
-					const length = block.getLength();
+					const length = key.length;
 
-					window.setTimeout(() => this.focus(blockId, length, length, true));
+					focus.set(blockId, { from: length, to: length });
+					focus.apply();
+					focus.scroll(isPopup, blockId);
 				});
 			});
 		};
@@ -845,7 +851,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		if (block.isText()) {
 
 			// Select all
-			keyboard.shortcut(`${cmd}+a`, e, (pressed: string) => {
+			keyboard.shortcut('selectAll', e, (pressed: string) => {
 				if ((range.from == 0) && (range.to == length)) {
 					e.preventDefault();
 					this.onSelectAll();
@@ -998,7 +1004,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			});
 
 			// Tab, indent block
-			keyboard.shortcut('tab, shift+tab', e, (pressed: string) => {
+			keyboard.shortcut('indent, outdent', e, (pressed: string) => {
 				const isShift = pressed.match('shift') ? true : false;
 
 				if (isInsideTable) {
@@ -1014,14 +1020,13 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			});
 
 			// Move blocks with arrows
-			keyboard.shortcut(`${cmd}+shift+arrowup, ${cmd}+shift+arrowdown`, e, (pressed: string) => {
+			keyboard.shortcut('moveSelectionUp, moveSelectionDown', e, (pressed: string) => {
 				this.onCtrlShiftArrowBlock(e, pressed);
 			});
 		};
 	};
 
 	getStyleParam () {
-		const cmd = keyboard.cmdKey();
 		return [
 			{ key: 'turnBlock0', style: I.TextStyle.Paragraph },
 			{ key: 'turnBlock1', style: I.TextStyle.Header1 },
@@ -1229,7 +1234,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		const { rootId } = this.props;
 		const dir = pressed.match(Key.up) ? -1 : 1;
 		const next = S.Block.getFirstBlock(rootId, -dir, it => it.isFocusable());
-		
+
 		this.focusNextBlock(next, dir);
 	};
 
@@ -1486,6 +1491,9 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 	};
 
 	menuCheck () {
+		if (S.Menu.isOpen('onboarding', 'withDimmer')) {
+			return true;
+		};
 		return S.Menu.isOpen('', '', [ 'blockContext', 'searchText', 'onboarding', 'publish' ]);
 	};
 
@@ -1498,6 +1506,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		const { rootId } = this.props;
 		const { isInsideTable } = props;
 		const block = S.Block.getLeaf(rootId, focused);
+
 		if (!block) {
 			return;
 		};
@@ -1837,12 +1846,23 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			data = this.getClipboardData(e);
 		};
 
-		if (files.length && !data.files.length) {
-			U.Common.saveClipboardFiles(files, data, data => this.onPasteEvent(e, props, data));
-		} else {
-			e.preventDefault();
-			this.onPaste(data);
-		};
+		// Priorize HTML content
+		const hasHtml = data && data.html;
+		
+		if (hasHtml) {
+        	e.preventDefault();
+        	this.onPaste(data);
+	    } else {
+	        const clipboardItems = (e.clipboardData || e.originalEvent.clipboardData).items;
+	        const files = U.Common.getDataTransferFiles(clipboardItems);
+	        
+	        if (files.length && !data.files.length) {
+	            U.Common.saveClipboardFiles(files, data, data => this.onPasteEvent(e, props, data));
+	        } else {
+	            e.preventDefault();
+	            this.onPaste(data);
+	        };
+	    };
 	};
 
 	onPaste (data: any) {
@@ -2356,7 +2376,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		const { isPopup } = this.props;
 
 		window.setTimeout(() => {
-			focus.set(id, { from: from, to: to });
+			focus.set(id, { from, to });
 			focus.apply();
 
 			if (scroll) {

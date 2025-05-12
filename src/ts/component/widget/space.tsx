@@ -16,9 +16,8 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 	const cmd = keyboard.cmdSymbol();
 	const alt = keyboard.altSymbol();
 	const buttons = [
-		space.chatId && U.Object.isAllowedChat() ? { id: 'chat', name: translate('commonMainChat') } : null,
-		space.isShared ? { id: 'member', name: translate('commonMembers') } : null,
-		{ id: 'all', name: translate('commonAllContent') },
+		{ id: 'search', name: translate('commonSearch') },
+		!space.isPersonal ? { id: 'member', name: translate('pageSettingsSpaceIndexInviteMembers') } : null,
 	].filter(it => it);
 
 	if (isSpaceOwner && requestCnt) {
@@ -27,12 +26,7 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 
 	const onSettings = (e: MouseEvent) => {
 		e.stopPropagation();
-		U.Object.openAuto({ id: 'spaceIndex', layout: I.ObjectLayout.Settings });
-	};
-
-	const onSearch = (e: MouseEvent) => {
-		e.stopPropagation();
-		keyboard.onSearchPopup(analytics.route.widget);
+		U.Object.openRoute({ id: 'spaceIndex', layout: I.ObjectLayout.Settings });
 	};
 
 	const onCreate = (e: MouseEvent) => {
@@ -49,7 +43,8 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 			className: 'fixed',
 			classNameWrap: 'fromSidebar',
 		}, {}, { 
-			deleteEmpty: true, 
+			deleteEmpty: true,
+			selectTemplate: true,
 			withImport: true,
 		}, analytics.route.widget, object => U.Object.openAuto(object));
 	};
@@ -60,17 +55,13 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 
 		switch (item.id) {
 			case 'member': {
-				U.Object.openAuto({ id: 'spaceShare', layout: I.ObjectLayout.Settings });
+				U.Object.openRoute({ id: 'spaceShare', layout: I.ObjectLayout.Settings });
+				analytics.event('ClickSpaceWidgetInvite', { route: analytics.route.widget });
 				break;
 			};
 
-			case 'all': {
-				sidebar.leftPanelSetState({ page: 'object' });
-				break;
-			};
-
-			case 'chat': {
-				U.Object.openAuto({ id: S.Block.workspace, layout: I.ObjectLayout.Chat });
+			case 'search': {
+				keyboard.onSearchPopup(analytics.route.widget);
 				break;
 			};
 		};
@@ -101,8 +92,6 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 					</div>
 				</div>
 				<div className="side right">
-					<Icon className="search withBackground" onClick={onSearch} tooltip={translate('commonSearch')} tooltipCaption={keyboard.getCaption('search')} />
-
 					{canWrite ? (
 						<div className="plusWrapper" onMouseEnter={onPlusHover} onMouseLeave={() => Preview.tooltipHide()}>
 							<Icon ref={plusRef} className="plus withBackground" onClick={onCreate} />

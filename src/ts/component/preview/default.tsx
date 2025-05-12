@@ -7,6 +7,8 @@ interface Props {
 	rootId?: string;
 	object?: any;
 	className?: string;
+	withPlural?: boolean;
+	noLoad?: boolean;
 	position?: () => void;
 	setObject?: (object: any) => void;
 };
@@ -17,8 +19,9 @@ const PreviewDefault = observer(forwardRef<{}, Props>((props, ref) => {
 		rootId = '',
 		className = '',
 		object: initialObject,
-		position,
 		setObject: setParentObject,
+		withPlural = false,
+		noLoad = false,
 	} = props;
 	const [ isLoading, setIsLoading ] = useState(false);
 	const [ object, setObject ] = useState(initialObject);
@@ -31,16 +34,21 @@ const PreviewDefault = observer(forwardRef<{}, Props>((props, ref) => {
 	};
 
 	const load = () => {
-		if (isLoading || (idRef.current == rootId)) {
+		if (isLoading || (idRef.current == rootId) || noLoad) {
 			return;
 		};
 
 		idRef.current = rootId;
 		setIsLoading(true);
 
-		U.Object.getById(rootId, {}, (object) => {
-			setObject(object);
+		U.Object.getById(rootId, {}, object => {
 			setIsLoading(false);
+
+			if (!object) {
+				return;
+			};
+
+			setObject(object);
 
 			if (setParentObject) {
 				setParentObject(object);
@@ -48,15 +56,7 @@ const PreviewDefault = observer(forwardRef<{}, Props>((props, ref) => {
 		});
 	};
 
-	useEffect(() => {
-		if (initialObject) {
-			setObject(initialObject);
-		};
-	});
-
-	useEffect(() => {
-		initialObject ? position && position() : load();
-	});
+	useEffect(() => load(), [ rootId ]);
 
 	return (
 		<div className={cn.join(' ')}>
@@ -64,7 +64,7 @@ const PreviewDefault = observer(forwardRef<{}, Props>((props, ref) => {
 				<>
 					<div className="previewHeader">
 						<IconObject object={object} />
-						<ObjectName object={object} />
+						<ObjectName object={object} withPlural={withPlural} withLatex={true} />
 					</div>
 					<ObjectDescription object={object} />
 					<div className="featured">

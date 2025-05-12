@@ -484,6 +484,7 @@ const Block = observer(class Block extends React.Component<Props> {
 		e.stopPropagation();
 
 		if (!this._isMounted || keyboard.isResizing) {
+			e.preventDefault();
 			return;
 		};
 		
@@ -620,15 +621,13 @@ const Block = observer(class Block extends React.Component<Props> {
 		const win = $(window);
 		const node = $(this.node);
 		const prevBlockId = childrenIds[index - 1];
-		const offset = (prevBlockId ? node.find('#block-' + prevBlockId).offset().left : 0) + J.Size.blockMenu ;
-		const add = $('#button-block-add');
+		const offset = (prevBlockId ? node.find('#block-' + prevBlockId).offset().left : 0) + J.Size.blockMenu;
 		
 		selection?.clear();
 
 		this.unbind();
 		node.addClass('isResizing');
 		$('body').addClass('colResize');
-		add.css({ opacity: 0 });
 		
 		keyboard.setResize(true);
 		keyboard.disableSelection(true);
@@ -688,10 +687,6 @@ const Block = observer(class Block extends React.Component<Props> {
 		const currentBlockId = childrenIds[index];
 		const res = this.calcWidth(e.pageX - offset, index);
 
-		if (!res) {
-			return;
-		};
-		
 		this.unbind();
 		node.removeClass('isResizing');
 		$('body').removeClass('colResize');
@@ -700,11 +695,13 @@ const Block = observer(class Block extends React.Component<Props> {
 		keyboard.disableSelection(false);	
 		
 		node.find('.colResize.active').removeClass('active');
-		
-		C.BlockListSetFields(rootId, [
-			{ blockId: prevBlockId, fields: { width: res.percent * res.sum } },
-			{ blockId: currentBlockId, fields: { width: (1 - res.percent) * res.sum } },
-		]);
+
+		if (res) {
+			C.BlockListSetFields(rootId, [
+				{ blockId: prevBlockId, fields: { width: res.percent * res.sum } },
+				{ blockId: currentBlockId, fields: { width: (1 - res.percent) * res.sum } },
+			]);
+		};
 		
 		node.find('.resizable').trigger('resizeEnd', [ e ]);
 	};
@@ -741,7 +738,7 @@ const Block = observer(class Block extends React.Component<Props> {
 			};
 		};
 
-		return { sum: sum, percent: x };
+		return { sum, percent: x };
 	};
 	
 	onMouseMove (e: any) {
@@ -808,31 +805,28 @@ const Block = observer(class Block extends React.Component<Props> {
 		});
 	};
 
-	renderLinks (node: any, marks: I.Mark[], getValue: () => string, props: any) {
+	renderLinks (rootId: string, node: any, marks: I.Mark[], getValue: () => string, props: any, param?: any) {
 		node = $(node);
+		param = param || {};
 
-		const { readonly, block } = props;
+		const { readonly } = props;
 		const items = node.find(Mark.getTag(I.MarkType.Link));
+		const subId = param.subId || rootId;
 
 		if (!items.length) {
 			return;
 		};
 
-		items.each((i: number, item: any) => {
-			item = $(item);
-
+		const getParam = (item: any) => {
 			const range = String(item.attr('data-range') || '').split('-');
 			const url = String(item.attr('href') || '');
 			const scheme = U.Common.getScheme(url);
 			const isInside = scheme == J.Constant.protocol;
 
-			if (!url) {
-				return;
-			};
-
 			let route = '';
 			let target;
 			let type;
+			let spaceId = '';
 
 			if (isInside) {
 				route = '/' + url.split('://')[1];
@@ -840,18 +834,35 @@ const Block = observer(class Block extends React.Component<Props> {
 				const search = url.split('?')[1];
 				if (search) {
 					const searchParam = U.Common.searchParam(search);
+
 					target = searchParam.objectId;
+					spaceId = searchParam.spaceId;
 				} else {
 					const routeParam = U.Router.getParam(route);
+
 					target = routeParam.id;
+					spaceId = routeParam.spaceId;
 				};
 			} else {
 				target = U.Common.urlFix(url);
 				type = I.PreviewType.Link;
 			};
 
+			return { route, target, type, range, spaceId, isInside };
+		};
+
+		items.each((i: number, item: any) => {
+			item = $(item);
+
+			item.off('click.link').on('click.link', e => {
+				e.preventDefault();
+			});
+
 			item.off('mousedown.link').on('mousedown.link', e => {
 				e.preventDefault();
+
+				const item = $(e.currentTarget);
+				const { isInside, route, target } = getParam(item);
 
 				isInside ? U.Router.go(route, {}) : Action.openUrl(target);
 			});
@@ -862,24 +873,37 @@ const Block = observer(class Block extends React.Component<Props> {
 					return;
 				};
 
+				const item = $(e.currentTarget);
+				const url = String(item.attr('href') || '');
+
+				if (!url) {
+					return;
+				};
+
+				const { target, type, range, spaceId, isInside } = getParam(item);
+
+				let object;
+
+				if (isInside) {
+					if (spaceId && (spaceId !== S.Common.space)) {
+						return;
+					};
+
+					object = S.Detail.get(subId, target, []);
+				};
+
 				Preview.previewShow({
 					target,
+					object,
 					type,
+					markType: I.MarkType.Link,
 					element: item,
 					range: { 
 						from: Number(range[0]) || 0,
 						to: Number(range[1]) || 0, 
 					},
 					marks,
-					onChange: marks => {
-						const restricted = [];
-						if (block.isTextHeader()) {
-							restricted.push(I.MarkType.Bold);
-						};
-
-						const parsed = Mark.fromHtml(getValue(), restricted);
-						this.setMarks(parsed.text, marks);
-					},
+					onChange: marks => this.setMarksCallback(getValue(), marks, param.onChange),
 					noUnlink: readonly,
 					noEdit: readonly,
 				});
@@ -889,12 +913,14 @@ const Block = observer(class Block extends React.Component<Props> {
 		});
 	};
 
-	renderMentions (rootId: string, node: any, marks: I.Mark[], getValue: () => string) {
+	renderMentions (rootId: string, node: any, marks: I.Mark[], getValue: () => string, param?: any) {
 		node = $(node);
+		param = param || {};
 
 		const { block } = this.props;
-		const size = U.Data.emojiParam(block.content.style);
+		const size = param.iconSize || U.Data.emojiParam(block.content.style);
 		const items = node.find(Mark.getTag(I.MarkType.Mention));
+		const subId = param.subId || rootId;
 
 		if (!items.length) {
 			return;
@@ -903,19 +929,14 @@ const Block = observer(class Block extends React.Component<Props> {
 		items.each((i: number, item: any) => {
 			item = $(item);
 			
-			const data = item.data();
-			if (!data.param) {
-				return;
-			};
-
 			const smile = item.find('smile');
 			if (!smile.length) {
 				return;
 			};
 
 			const range = String(item.attr('data-range') || '').split('-');
-			const param = String(item.attr('data-param') || '');
-			const object = S.Detail.get(rootId, param, []);
+			const target = String(item.attr('data-param') || '');
+			const object = S.Detail.get(subId, target, []);
 			const { id, _empty_, layout, done, isDeleted, isArchived } = object;
 			const isTask = U.Object.isTaskLayout(layout);
 			const name = item.find('name');
@@ -955,7 +976,7 @@ const Block = observer(class Block extends React.Component<Props> {
 				};
 			});
 
-			if (!param || item.hasClass('disabled')) {
+			if (!target || item.hasClass('disabled')) {
 				return;
 			};
 
@@ -971,6 +992,8 @@ const Block = observer(class Block extends React.Component<Props> {
 				};
 
 				Preview.previewShow({
+					target: object.id,
+					markType: I.MarkType.Mention,
 					object,
 					element: name,
 					range: { 
@@ -978,11 +1001,9 @@ const Block = observer(class Block extends React.Component<Props> {
 						to: Number(range[1]) || 0, 
 					},
 					noUnlink: true,
+					withPlural: true,
 					marks,
-					onChange: marks => {
-						const parsed = Mark.fromHtml(getValue(), []);
-						this.setMarks(parsed.text, marks);
-					},
+					onChange: marks => this.setMarksCallback(getValue(), marks, param.onChange),
 				});
 			});
 
@@ -990,11 +1011,13 @@ const Block = observer(class Block extends React.Component<Props> {
 		});
 	};
 
-	renderObjects (rootId: string, node: any, marks: I.Mark[], getValue: () => string, props: any) {
+	renderObjects (rootId: string, node: any, marks: I.Mark[], getValue: () => string, props: any, param?: any) {
 		node = $(node);
+		param = param || {};
 
 		const { readonly } = props;
 		const items = node.find(Mark.getTag(I.MarkType.Object));
+		const subId = param.subId || rootId;
 
 		if (!items.length) {
 			return;
@@ -1004,7 +1027,7 @@ const Block = observer(class Block extends React.Component<Props> {
 			item = $(item);
 			
 			const param = item.attr('data-param');
-			const object = S.Detail.get(rootId, param, []);
+			const object = S.Detail.get(subId, param, []);
 			const range = String(item.attr('data-range') || '').split('-');
 
 			if (!param) {
@@ -1037,6 +1060,7 @@ const Block = observer(class Block extends React.Component<Props> {
 
 				Preview.previewShow({
 					target: object.id,
+					markType: I.MarkType.Object,
 					object,
 					element: item,
 					marks,
@@ -1046,10 +1070,8 @@ const Block = observer(class Block extends React.Component<Props> {
 					},
 					noUnlink: readonly,
 					noEdit: readonly,
-					onChange: marks => {
-						const parsed = Mark.fromHtml(getValue(), []);
-						this.setMarks(parsed.text, marks);
-					},
+					withPlural: true,
+					onChange: marks => this.setMarksCallback(getValue(), marks, param.onChange),
 				});
 
 				U.Common.textStyle(item, { border: 0.35 });
@@ -1057,8 +1079,9 @@ const Block = observer(class Block extends React.Component<Props> {
 		});
 	};
 
-	renderEmoji (node: any) {
+	renderEmoji (node: any, param?: any) {
 		node = $(node);
+		param = param || {};
 
 		const items = node.find(Mark.getTag(I.MarkType.Emoji));
 		if (!items.length) {
@@ -1066,7 +1089,7 @@ const Block = observer(class Block extends React.Component<Props> {
 		};
 
 		const { block } = this.props;
-		const size = U.Data.emojiParam(block.content.style);
+		const size = param.iconSize || U.Data.emojiParam(block.content.style);
 
 		items.each((i: number, item: any) => {
 			item = $(item);
@@ -1078,6 +1101,23 @@ const Block = observer(class Block extends React.Component<Props> {
 				ReactDOM.render(<IconObject size={size} iconSize={size} object={{ iconEmoji: param }} />, smile.get(0));
 			};
 		});
+	};
+
+	setMarksCallback (text: string, marks: I.Mark[], onChange: (text: string, marks: I.Mark[]) => void) {
+		const { block } = this.props;
+		const restricted = [];
+
+		if (block.isTextHeader()) {
+			restricted.push(I.MarkType.Bold);
+		};
+
+		const parsed = Mark.fromHtml(text, restricted);
+
+		if (onChange) {
+			onChange(parsed.text, marks);
+		} else {
+			this.setMarks(parsed.text, marks);
+		};
 	};
 
 	checkMarkOnBackspace (value: string, range: I.TextRange, oM: I.Mark[]) {

@@ -50,6 +50,12 @@ export const AccountLocalLinkSolveChallenge = (response: Rpc.Account.LocalLink.S
 	};
 };
 
+export const AccountMigrate = (response: Rpc.Account.Migrate.Response) => {
+	return {
+		requiredSpace: response.getError().getRequiredspace()
+	};
+};
+
 export const DebugSpaceSummary = (response: Rpc.Debug.SpaceSummary.Response) => {
 	return response.toObject();
 };
@@ -247,21 +253,19 @@ export const ObjectSubscribeIds = (response: Rpc.Object.SubscribeIds.Response) =
 	};
 };
 
+/*
 export const ObjectGraph = (response: Rpc.Object.Graph.Response) => {
 	const nodes = (response.getNodesList() || []).map(Decode.struct).map(it => S.Detail.mapper(it));
-	const hashes: any = [];
-
-	let edges: any[] = (response.getEdgesList() || []).map(Mapper.From.GraphEdge);
-
-	// Deduplicate edges
-	edges = edges.filter(d => { 
-		const hash = [ d.source, d.target ].join('-');
-		if (hashes.includes(hash)) {
+	const hashes = new Set<string>();
+	const edges: any[] = (response.getEdgesList() || []).map(Mapper.From.GraphEdge).filter(d => {
+		if (d.source == d.target) {
 			return false;
 		};
 
-		hashes.push(hash);
-		return (d.source != d.target);
+		const hash = `${d.source}-${d.target}`;
+
+		hashes.add(hash);
+		return !hashes.has(hash);
 	});
 
 	// Find backlinks
@@ -273,6 +277,44 @@ export const ObjectGraph = (response: Rpc.Object.Graph.Response) => {
 			edge.isDouble = true;
 			edge.types = [ edge.type, double.type ];
 			edges.splice(idx, 1);
+		};
+	};
+
+	return { edges, nodes };
+};
+*/
+
+export const ObjectGraph = (response: Rpc.Object.Graph.Response) => {
+	const nodes = (response.getNodesList() || []).map(Decode.struct).map(it => S.Detail.mapper(it));
+	const edgesRaw = response.getEdgesList() || [];
+	const seen = new Set<string>();
+	const edgeMap = new Map<string, any>();
+	const edges: any[] = [];
+
+	for (let i = 0; i < edgesRaw.length; i++) {
+		const edge = Mapper.From.GraphEdge(edgesRaw[i]);
+
+		if (edge.source == edge.target) {
+			continue;
+		};
+
+		const key = `${edge.source}-${edge.target}`;
+		const reverseKey = `${edge.target}-${edge.source}`;
+
+		// Check if reverse already added
+		if (edgeMap.has(reverseKey)) {
+			const reverse = edgeMap.get(reverseKey);
+
+			reverse.isDouble = true;
+			reverse.types = [reverse.type, edge.type];
+			edgeMap.delete(reverseKey);
+			continue;
+		};
+
+		if (!seen.has(key)) {
+			seen.add(key);
+			edgeMap.set(key, edge);
+			edges.push(edge);
 		};
 	};
 
@@ -324,6 +366,12 @@ export const ObjectDateByTimestamp = (response: Rpc.Object.DateByTimestamp.Respo
 };
 
 export const BlockCreate = (response: Rpc.Block.Create.Response) => {
+	return {
+		blockId: response.getBlockid(),
+	};
+};
+
+export const BlockCreateWidget = (response: Rpc.Block.CreateWidget.Response) => {
 	return {
 		blockId: response.getBlockid(),
 	};
@@ -474,6 +522,7 @@ export const TemplateCreateFromObject = (response: Rpc.Template.CreateFromObject
 export const WorkspaceCreate = (response: Rpc.Workspace.Create.Response) => {
 	return {
 		objectId: response.getSpaceid(),
+		startingId: response.getStartingobjectid(),
 	};
 };
 
@@ -593,6 +642,7 @@ export const DeviceList = (response: Rpc.Device.List.Response) => {
 export const ChatGetMessages = (response: Rpc.Chat.GetMessages.Response) => {
 	return {
 		messages: (response.getMessagesList() || []).map(Mapper.From.ChatMessage),
+		state: Mapper.From.ChatState(response.getChatstate()),
 	};
 };
 
@@ -605,12 +655,19 @@ export const ChatGetMessagesByIds = (response: Rpc.Chat.GetMessagesByIds.Respons
 export const ChatSubscribeLastMessages = (response: Rpc.Chat.SubscribeLastMessages.Response) => {
 	return {
 		messages: (response.getMessagesList() || []).map(Mapper.From.ChatMessage),
+		state: Mapper.From.ChatState(response.getChatstate()),
 	};
 };
 
 export const ChatAddMessage = (response: Rpc.Chat.AddMessage.Response) => {
 	return {
 		messageId: response.getMessageid(),
+	};
+};
+
+export const ChatSubscribeToMessagePreviews = (response: Rpc.Chat.SubscribeToMessagePreviews.Response) => {
+	return {
+		previews: (response.getPreviewsList() || []).map(Mapper.From.ChatPreview),
 	};
 };
 
@@ -646,5 +703,11 @@ export const PublishingResolveUri = (response: Rpc.Publishing.ResolveUri.Respons
 export const PublishingGetStatus = (response: Rpc.Publishing.GetStatus.Response) => {
 	return {
 		state: response.hasPublish() ? Mapper.From.PublishState(response.getPublish()) : null,
+	};
+};
+
+export const ObjectImportUseCase = (response: Rpc.Object.ImportUseCase.Response) => {
+	return {
+		startingId: response.getStartingobjectid(),
 	};
 };

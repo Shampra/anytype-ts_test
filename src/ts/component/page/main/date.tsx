@@ -64,14 +64,16 @@ const PageMainDate = observer(forwardRef<{}, I.PageComponent>((props, ref: any) 
 	};
 
 	const close = () => {
-		if (!idRef.current) {
+		const id = idRef.current;
+
+		if (!id) {
 			return;
 		};
 
-		const close = !(isPopup && (rootId == idRef.current));
+		const close = !isPopup || (rootId == id);
 
 		if (close) {
-			Action.pageClose(idRef.current, true);
+			Action.pageClose(id, true);
 		};
 	};
 
@@ -161,7 +163,7 @@ const PageMainDate = observer(forwardRef<{}, I.PageComponent>((props, ref: any) 
 			return;
 		};
 
-		U.Data.search({
+		U.Subscription.search({
 			filters: getFilters(start, end),
 			keys: [ relationKey ],
 		}, (message: any) => {

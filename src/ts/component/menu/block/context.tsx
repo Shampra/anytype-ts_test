@@ -62,8 +62,7 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 						<Icon 
 							id={`button-${blockId}-style`} 
 							arrow={true} 
-							tooltip={translate('menuBlockContextSwitchStyle')} 
-							tooltipY={I.MenuDirection.Top} 
+							tooltipParam={{ text: translate('menuBlockContextSwitchStyle') }} 
 							className={[ styleIcon, 'blockStyle' ].join(' ')} 
 							onMouseDown={e => this.onMark(e, 'style')} 
 						/>
@@ -94,9 +93,7 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 											id={`button-${blockId}-${action.type}`} 
 											key={i} 
 											className={cn.join(' ')} 
-											tooltip={action.name}
-											tooltipCaption={action.caption}
-											tooltipY={I.MenuDirection.Top}
+											tooltipParam={{ text: action.name, caption: action.caption }}
 											onMouseDown={e => this.onMark(e, action.type)} 
 										/>
 									);
@@ -109,9 +106,7 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 								id={`button-${blockId}-${I.MarkType.Color}`}
 								className="color"
 								inner={color}
-								tooltip={translate('commonColor')}
-								tooltipCaption={keyboard.getCaption('textColor')}
-								tooltipY={I.MenuDirection.Top}
+								tooltipParam={{ text: translate('commonColor'), caption: keyboard.getCaption('textColor') }}
 								onMouseDown={e => this.onMark(e, I.MarkType.Color)} 
 							/>
 
@@ -119,9 +114,7 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 								id={`button-${blockId}-${I.MarkType.BgColor}`}
 								className="color"
 								inner={background} 
-								tooltip={translate('commonBackground')}
-								tooltipCaption={keyboard.getCaption('textBackground')}
-								tooltipY={I.MenuDirection.Top}
+								tooltipParam={{ text: translate('commonBackground'), caption: keyboard.getCaption('textBackground') }}
 								onMouseDown={e => this.onMark(e, I.MarkType.BgColor)} 
 							/>
 						</div>
@@ -133,15 +126,13 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 						<Icon
 							id={`button-${blockId}-comment`}
 							className="comment dn"
-							tooltip={translate('commonComment')}
-							tooltipY={I.MenuDirection.Top}
+							tooltipParam={{ text: translate('commonComment') }}
 						/>
 
 						<Icon 
 							id={`button-${blockId}-more`}
 							className="more"
-							tooltip={translate('menuBlockContextMoreOptions')}
-							tooltipY={I.MenuDirection.Top}
+							tooltipParam={{ text: translate('menuBlockContextMoreOptions') }}
 							onMouseDown={e => this.onMark(e, 'more')}
 						/>
 					</div>
@@ -182,7 +173,8 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 		
 		const { from, to } = range;
 		const object = S.Detail.get(rootId, rootId);
-
+		const element = $(`#${getId()}`);
+		
 		keyboard.disableContextClose(true);
 		focus.set(blockId, range);
 
@@ -295,12 +287,14 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 				
 			case I.MarkType.Link: {
 				menuId = 'blockLink';
-
 				mark = Mark.getInRange(marks, type, { from, to });
 
+				const rect = (element.get(0).getBoundingClientRect() || {}) as DOMRect;
+				rect.y = Number(rect.y) + $(window).scrollTop();
+
 				menuParam = Object.assign(menuParam, {
-					offsetY: param.offsetY,
-					rect: param.recalcRect(),
+					offsetY: -rect.height,
+					rect,
 					width: getSize().width,
 					noFlipY: true,
 				});
@@ -428,6 +422,7 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 			case 'turnObject': {
 				menuId = 'typeSuggest';
 				menuParam.data = Object.assign(menuParam.data, {
+					canAdd: true,
 					filter: '',
 					filters: [
 						{ relationKey: 'recommendedLayout', condition: I.FilterCondition.In, value: U.Object.getPageLayouts() },

@@ -10,35 +10,6 @@
     }
 }
 
-/* PageMainType */
-
-.pageMainType {
-    .wrapper {
-        .section.template {
-			.btn {
-				.icon.plus { background-image: url('#{$themePath}/icon/plus/template0.svg'); }
-			}
-
-			.btn:hover {
-				.icon.plus { background-image: url('#{$themePath}/icon/plus/template1.svg'); }
-			}
-
-			.listObjectPreview {
-				.icon.arrow.left { left: -32px; }
-				.icon.arrow.right { right: -32px; }
-			}
-		}
-
-        .section.relation {
-			.item.add {
-				.clickable:hover {
-					.icon.plus { background-image: url('~img/icon/plus/menu0.svg'); }
-				}
-			}
-        }
-    }
-}
-
 /* PageMainNavigation */
 
 .pageMainNavigation {
@@ -67,13 +38,12 @@
 			}
 		}
 	}
-
-
 }
 
 /* PageMainArchive */
 
-.pageMainArchive {
+.pageMainArchive,
+.pageSettingsArchive {
 	.wrapper {
 		.titleWrapper {
 			.icon.archive { background-image: url('#{$themePath}/icon/archive/logo.svg'); }
@@ -97,6 +67,7 @@
 			.section {
 				.sectionContent {
 					.item {
+						.icon.widget { background-image: url('#{$themePath}/icon/settings/widget.svg'); }
 						.icon.arrow.down { background-image: url('#{$themePath}/arrow/button/black.svg'); }
 					}
 				}
@@ -153,22 +124,26 @@
 	}
 
 	.pageSettingsMembership {
-		.slide { background: var(--color-shape-tertiary) !important; }
-		.slide.c0 {
-			.illustration { background: url('#{$themePath}/icon/payment/slide0.svg'); }
-		}
-		.slide.c1 {
-			.illustration { background: url('#{$themePath}/icon/payment/slide1.svg'); }
-		}
-		.slide.c2 {
-			.illustration { background: url('#{$themePath}/icon/payment/slide2.svg'); }
-		}
-		.slide.c3 {
-			.illustration { background: url('#{$themePath}/icon/payment/slide3.svg'); }
-		}
-		.tiers {
+		.swiper {
+			.slide,
 			.tier { background: var(--color-shape-tertiary) !important; }
 		}
+
+		.swiper.featuresList {
+			.slide.c0 {
+				.illustration { background: url('#{$themePath}/icon/payment/slide0.svg'); }
+			}
+			.slide.c1 {
+				.illustration { background: url('#{$themePath}/icon/payment/slide1.svg'); }
+			}
+			.slide.c2 {
+				.illustration { background: url('#{$themePath}/icon/payment/slide2.svg'); }
+			}
+			.slide.c3 {
+				.illustration { background: url('#{$themePath}/icon/payment/slide3.svg'); }
+			}
+		}
+
 		.actionItems {
 			.icon { background-image: url('#{$themePath}/icon/payment/hyperlink.svg'); }
 		}
@@ -186,6 +161,16 @@
 				.icon.invite { background: url('#{$themePath}/icon/settings/space/invite.svg'); }
 				.icon.qr { background: url('#{$themePath}/icon/settings/space/qr.svg'); }
 				.icon.more { background: url('#{$themePath}/icon/settings/space/more.svg'); }
+			}
+		}
+
+		.sections {
+			.section {
+				.sectionContent {
+					> .item {
+						.icon.widget { background-image: url('#{$themePath}/icon/settings/widget.svg'); }
+					}
+				}
 			}
 		}
 	}

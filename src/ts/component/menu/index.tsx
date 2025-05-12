@@ -77,6 +77,8 @@ import MenuDataviewNew from './dataview/new';
 import MenuSyncStatus from './syncStatus';
 import MenuSyncStatusInfo from './syncStatus/info';
 
+import MenuIdentity from './identity';
+
 interface State {
 	tab: string;
 };
@@ -157,6 +159,8 @@ const Components: any = {
 
 	syncStatus:				 MenuSyncStatus,
 	syncStatusInfo:			 MenuSyncStatusInfo,
+
+	identity:				 MenuIdentity,
 };
 
 const Menu = observer(class Menu extends React.Component<I.Menu, State> {
@@ -463,22 +467,13 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 		return Number(window.AnytypeGlobalConfig?.menuBorderBottom) || J.Size.menuBorder;
 	};
 
-	getBorderLeft () {
-		let ret = J.Size.menuBorder;
-
-		if (S.Common.showVault && !sidebar.data.isClosed) {
-			ret += J.Size.vault.width;
-		};
-
-		return ret;
+	getBorderLeft (isFixed) {
+		return (Number(window.AnytypeGlobalConfig?.menuBorderLeft) || J.Size.menuBorder) + (isFixed ? 0 : J.Size.vault.width);
 	};
 
 	position () {
 		const { id, param } = this.props;
 		const { element, recalcRect, type, vertical, horizontal, fixedX, fixedY, isSub, noFlipX, noFlipY, withArrow, stickToElementEdge } = param;
-		const borderLeft = this.getBorderLeft();
-		const borderTop = this.getBorderTop();
-		const borderBottom = this.getBorderBottom();
 
 		if (this.ref && this.ref.beforePosition) {
 			this.ref.beforePosition();
@@ -495,6 +490,9 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 			const arrow = menu.find('#arrowDirection');
 			const isFixed = (menu.css('position') == 'fixed') || (node.css('position') == 'fixed');
 			const winSize = U.Common.getWindowDimensions();
+			const borderLeft = this.getBorderLeft(isFixed);
+			const borderTop = this.getBorderTop();
+			const borderBottom = this.getBorderBottom();
 			const ww = winSize.ww;
 			const wh = winSize.wh + (!isFixed ? win.scrollTop() : 0);
 			const width = param.width ? param.width : menu.outerWidth();
@@ -977,8 +975,16 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 			index = items.findIndex(it => it.id == item.id);
 		};
 
-		if (this.ref.refList && scroll) {
-			this.ref.refList.scrollToRow(Math.max(0, index));
+		let listRef = null;
+		if (this.ref.refList) {
+			listRef = this.ref.refList;
+		} else 
+		if (this.ref.getListRef) {
+			listRef = this.ref.getListRef();
+		};
+
+		if (listRef && scroll) {
+			listRef.scrollToRow(Math.max(0, index));
 		};
 
 		const next = items[index];
@@ -1053,7 +1059,8 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 	};
 
 	storageSet (data: any) {
-		Storage.set(this.getId(), data);
+		const current = this.storageGet();
+		Storage.set(this.getId(), Object.assign(current, data));
 	};
 
 	getId (): string {

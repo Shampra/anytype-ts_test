@@ -3,7 +3,7 @@ import $ from 'jquery';
 import raf from 'raf';
 import { observer } from 'mobx-react';
 import { Icon, ObjectName, DropTarget, IconObject } from 'Component';
-import { C, I, S, U, J, translate, Storage, Action, analytics, Dataview, keyboard, Relation } from 'Lib';
+import { C, I, S, U, J, translate, Storage, Action, analytics, Dataview, keyboard, Relation, sidebar } from 'Lib';
 
 import WidgetSpace from './space';
 import WidgetView from './view';
@@ -20,20 +20,15 @@ interface Props extends I.WidgetComponent {
 
 const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 
+	const { config, space } = S.Common;
+	const spaceview = U.Space.getSpaceview();
 	const { block, isPreview, isEditing, className, setEditing, onDragStart, onDragOver, setPreview } = props;
 	const { viewId } = block.content;
 	const { root, widgets } = S.Block;
 	const childrenIds = S.Block.getChildrenIds(widgets, block.id);
 	const child = childrenIds.length ? S.Block.getLeaf(widgets, childrenIds[0]) : null;
 	const targetId = child ? child.getTargetObjectId() : '';
-
-	const isSystemTarget = (): boolean => {
-		return child ? isSystemTargetId(child.getTargetObjectId()) : false;
-	};
-
-	const isSystemTargetId = (id: string): boolean => {
-		return U.Menu.isSystemWidget(id);
-	};
+	const isSystemTarget = child ? U.Menu.isSystemWidget(child.getTargetObjectId()) : false;
 
 	const getObject = () => {
 		if (!child) {
@@ -41,8 +36,8 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 		};
 
 		let object = null;
-		if (isSystemTargetId(targetId)) {
-			object = U.Menu.getFixedWidgets().find(it => it.id == targetId);
+		if (U.Menu.isSystemWidget(targetId)) {
+			object = U.Menu.getSystemWidgets().find(it => it.id == targetId);
 		} else {
 			object = S.Detail.get(widgets, targetId);
 		};
@@ -70,11 +65,25 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 	const childRef = useRef(null);
 	const subId = useRef('');
 	const timeout = useRef(0);
-	const recordIds = S.Record.getRecords(subId.current).filter(it => !it.isArchived && !it.isDeleted).map(it => it.id)
 	const isFavorite = targetId == J.Constant.widgetId.favorite;
-	const favCnt = isFavorite ? recordIds.length : 0;
+	const isChat = targetId == J.Constant.widgetId.chat;
 
+	let cnt = 0;
+	let showCnt = false;
 	let layout = block.content.layout;
+
+	if (isFavorite) {
+		cnt = S.Record.getRecords(subId.current).filter(it => !it.isArchived && !it.isDeleted).length;
+		showCnt = cnt > limit;
+	};
+
+	if (isChat) {
+		const counters = S.Chat.getChatCounters(space, spaceview.chatId);
+
+		cnt = counters.mentionCounter || counters.messageCounter;
+		showCnt = !!cnt;
+	};
+
 	if (object) {
 		const layoutOptions = U.Menu.getWidgetLayoutOptions(object.id, object.layout).map(it => it.id);
 
@@ -86,9 +95,9 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 	const hasChild = ![ I.WidgetLayout.Space ].includes(layout);
 	const canWrite = U.Space.canMyParticipantWrite();
 	const cn = [ 'widget' ];
-	const withSelect = !isSystemTarget() && (!isPreview || !U.Common.isPlatformMac());
+	const withSelect = !isSystemTarget && (!isPreview || !U.Common.isPlatformMac());
 	const childKey = `widget-${child?.id}-${layout}`;
-	const canDrop = object && !isSystemTarget() && !isEditing && S.Block.isAllowed(object.restrictions, [ I.RestrictionObject.Block ]);
+	const canDrop = object && !isSystemTarget && !isEditing && S.Block.isAllowed(object.restrictions, [ I.RestrictionObject.Block ]);
 
 	const unbind = () => {
 		const events = [ 'updateWidgetData', 'updateWidgetViews' ];
@@ -139,11 +148,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 		let templateId = '';
 		let isCollection = false;
 
-		if (layout != I.WidgetLayout.Tree) {
-			flags.push(I.ObjectFlag.DeleteEmpty);
-		};
-
-		if (U.Object.isInSetLayouts(object.layout) || U.Object.isTypeLayout(object.layout)) {
+		if (U.Object.isInSetLayouts(object.layout)) {
 			const rootId = getRootId();
 			if (!rootId) {
 				return;
@@ -184,6 +189,15 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 
 		if (!typeKey) {
 			return;
+		};
+
+		if (typeKey == J.Constant.typeKey.type) {
+			U.Object.createType({}, false);
+			return;
+		};
+
+		if ((layout != I.WidgetLayout.Tree) && ![ J.Constant.typeKey.type ].includes(typeKey)) {
+			flags.push(I.ObjectFlag.DeleteEmpty);
 		};
 
 		C.ObjectCreate(details, flags, templateId, typeKey, S.Common.space, (message: any) => {
@@ -273,7 +287,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 	const open = () => {
 		const node = $(nodeRef.current);
 		const icon = node.find('.icon.collapse');
-		const innerWrap = node.find('#innerWrap').show();
+		const innerWrap = node.find('#innerWrap').show().css({ height: '', opacity: 0 });
 		const wrapper = node.find('#wrapper').css({ height: 'auto' });
 		const height = wrapper.outerHeight();
 		const minHeight = getMinHeight();
@@ -343,7 +357,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 		const space = U.Space.getSpaceview();
 		const sorts = [];
 		const filters: I.Filter[] = [
-			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getSystemLayouts() },
+			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getSystemLayouts().filter(it => !U.Object.isTypeLayout(it)) },
 			{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template },
 		];
 		let limit = getLimit(block.content);
@@ -378,7 +392,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 			};
 		};
 
-		U.Data.searchSubscribe({
+		U.Subscription.subscribe({
 			subId: subId.current,
 			filters,
 			sorts,
@@ -427,7 +441,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 		if (!isPreview) {
 			blockId = block.id;
 			event = 'SelectHomeTab';
-			data.tab = isSystemTarget() ? object.name : analytics.typeMapper(object.type);
+			data.tab = isSystemTarget ? object.name : analytics.typeMapper(object.type);
 		};
 
 		setPreview(blockId);
@@ -453,7 +467,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 			return false;
 		};
 
-		if (U.Object.isInSetLayouts(object.layout) || U.Object.isTypeLayout(object.layout)) {
+		if (U.Object.isInSetLayouts(object.layout)) {
 			const rootId = getRootId();
 			const typeId = Dataview.getTypeId(rootId, J.Constant.blockId.dataview, object.id);
 			const type = S.Record.getTypeById(typeId);
@@ -535,7 +549,7 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 		parent: block,
 		block: child,
 		canCreate,
-		isSystemTarget: isSystemTarget,
+		isSystemTarget,
 		getData,
 		getLimit,
 		getTraceId,
@@ -583,12 +597,12 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 	} else {
 		buttons = (
 			<div className="buttons">
-				<div className="iconWrap more">
-					<Icon className="options" tooltip={translate('widgetOptions')} onClick={onOptions} />
+				<div className="iconWrap more" onClick={onOptions}>
+					<Icon className="options" tooltipParam={{ text: translate('widgetOptions') }} />
 				</div>
 				{canCreate ? (
-					<div className="iconWrap create">
-						<Icon className="plus" tooltip={translate('commonCreateNewObject')} onClick={onCreateClick} />
+					<div className="iconWrap create" onClick={onCreateClick}>
+						<Icon className="plus" tooltipParam={{ text: translate('commonCreateNewObject') }} />
 					</div>
 				) : ''}
 			</div>
@@ -602,32 +616,48 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 	};
 
 	if (hasChild) {
-		let icon = null;
-		let onClickHandler = isSystemTarget() ? onSetPreview : onClick;
+		const onClickHandler = (e: any) => {
+			e.preventDefault();
+			e.stopPropagation();
 
-		if (targetId == J.Constant.widgetId.bin) {
-			onClickHandler = () => U.Object.openAuto({ layout: I.ObjectLayout.Archive });
+			if (targetId == J.Constant.widgetId.bin) {
+				U.Object.openAuto({ layout: I.ObjectLayout.Archive });
+			} else 
+			if (targetId == J.Constant.widgetId.allObject) {
+				sidebar.leftPanelSetState({ page: 'object' });
+			} else 
+			if (targetId == J.Constant.widgetId.chat) {
+				U.Object.openAuto({ id: S.Block.workspace, layout: I.ObjectLayout.Chat });
+			} else
+			if (isSystemTarget) {
+				onSetPreview();
+			} else {
+				onClick(e);
+			};
+
+			analytics.event('ClickWidgetTitle', { widgetType: analytics.getWidgetType(block.content.autoAdded) });
 		};
 
+		let icon = null;
 		if (object?.isSystem) {
 			icon = <Icon className={[ 'headerIcon', object.icon ].join(' ')} />;
 		} else {
-			icon = <IconObject object={object} size={18} className="headerIcon" />;
+			icon = <IconObject object={object} size={20} iconSize={20} className="headerIcon" />;
 		};
 
 		head = (
 			<div className="head" onClick={onClickHandler}>
-				<div className="side left">
-					{back}
-					<div className="clickable">
-						{collapse}
-						{icon}
-						<ObjectName object={object} />
-						{favCnt > limit ? <span className="count">{favCnt}</span> : ''}
+				<div className="sides">
+					<div className="side left">
+						{back}
+						<div className="clickable">
+							{collapse}
+							{icon}
+							<ObjectName object={object} withPlural={true} />
+							{showCnt ? <span className="count">{cnt}</span> : ''}
+						</div>
 					</div>
-				</div>
-				<div className="side right">
-					{buttons}
+					<div className="side right">{buttons}</div>
 				</div>
 			</div>
 		);

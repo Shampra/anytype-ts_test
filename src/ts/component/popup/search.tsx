@@ -2,7 +2,7 @@ import * as React from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
 import { AutoSizer, CellMeasurer, InfiniteLoader, List, CellMeasurerCache } from 'react-virtualized';
-import { Icon, Loader, IconObject, EmptySearch, Label, Filter } from 'Component';
+import { Icon, Loader, IconObject, EmptySearch, Label, Filter, ObjectType } from 'Component';
 import { I, C, S, U, J, keyboard, focus, translate, analytics, Action, Relation, Mark, sidebar } from 'Lib';
 
 interface State {
@@ -64,7 +64,7 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 			let value: any = '';
 
 			if (relationKey) {
-				if ([ 'name', 'type' ].includes(relationKey)) {
+				if ([ 'name', 'pluralName', 'type' ].includes(relationKey)) {
 					return '';
 				} else {
 					const relation = S.Record.getRelationByKey(relationKey);
@@ -143,16 +143,15 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 					advanced = (
 						<Icon
 							className="advanced"
-							tooltip={translate('popupSearchTooltipSearchByBacklinks')}
-							tooltipCaption={`${shift} + Enter`}
-							tooltipY={I.MenuDirection.Top}
+							tooltipParam={{ text: translate('popupSearchTooltipSearchByBacklinks'), caption: `${shift} + Enter` }}
 							onClick={e => this.onBacklink(e, item)}
 						/>
 					);
 				};
 
-				let name = U.Object.name(item);
-				if (meta.highlight && (meta.relationKey == 'name')) {
+				let name = U.Object.name(item, true);
+
+				if (meta.highlight && [ 'name', 'pluralName' ].includes(meta.relationKey)) {
 					name = Mark.toHtml(meta.highlight, meta.ranges.map(it => ({ type: I.MarkType.Highlight, range: it })));
 
 					if (U.Object.isInFileLayouts(item.layout)) {
@@ -345,7 +344,7 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 		this._isMounted = false;
 		this.unbind();
 
-		C.ObjectSearchUnsubscribe([ J.Constant.subId.search ]);
+		U.Subscription.destroyList([ J.Constant.subId.search ]);
 		window.clearTimeout(this.timeout);
 	};
 
@@ -579,15 +578,16 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 		const { space } = S.Common;
 		const { backlink } = this.state;
 		const filter = this.filter;
+		const layouts = U.Object.getSystemLayouts().filter(it => !U.Object.isTypeLayout(it));
 		const filters: any[] = [
-			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getSystemLayouts() },
+			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: layouts },
 			{ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template },
 		];
 		const sorts = [
 			{ relationKey: 'lastOpenedDate', type: I.SortType.Desc },
 			{ relationKey: 'lastModifiedDate', type: I.SortType.Desc },
 			{ relationKey: 'type', type: I.SortType.Asc },
-		];
+		].map(U.Subscription.sortMapper);
 
 		let limit = J.Constant.limit.menuRecords;
 
@@ -603,7 +603,7 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 			this.setState({ isLoading: true });
 		};
 
-		C.ObjectSearchWithMeta(space, filters, sorts, J.Relation.default.concat([ 'links', 'backlinks', '_score' ]), filter, this.offset, limit, (message) => {
+		C.ObjectSearchWithMeta(space, filters, sorts, J.Relation.default.concat([ 'pluralName', 'links', 'backlinks', '_score' ]), filter, this.offset, limit, (message) => {
 			if (message.error.code) {
 				this.setState({ isLoading: false });
 				return;
@@ -623,7 +623,7 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 			this.items = this.items.concat(records);
 
 			if (this.items.length) {
-				U.Data.subscribeIds({
+				U.Subscription.subscribeIds({
 					subId: J.Constant.subId.search,
 					ids: this.items.map(it => it.id),
 					noDeps: true,
@@ -666,7 +666,7 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 
 			return { 
 				...it,
-				caption: !type || type.isDeleted ? translate('commonDeletedType') : type.name,
+				caption: <ObjectType object={type} />,
 				isObject: true,
 			};
 		});
@@ -811,7 +811,7 @@ const PopupSearch = observer(class PopupSearch extends React.Component<I.Popup, 
 
 			// Settings item
 			if (item.isSettings) {
-				U.Object.openAuto({ id: item.id, layout: I.ObjectLayout.Settings });
+				U.Object.openRoute({ id: item.id, layout: I.ObjectLayout.Settings });
 			} else 
 
 			// Import action

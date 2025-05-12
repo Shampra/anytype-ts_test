@@ -74,7 +74,10 @@ class CommonStore {
 		cluster: false,
 		filter: '',
 		depth: 1,
+		filterTypes: [],
 	};
+
+	private timeoutMap = new Map<string, number>();
 
 	public spaceStorageObj: SpaceStorage = {
 		bytesLimit: 0,
@@ -188,7 +191,7 @@ class CommonStore {
 		};
 
 		let type = S.Record.getTypeByKey(this.defaultType);
-		if (!type || !type.isInstalled || !U.Object.isAllowedObject(type.recommendedLayout)) {
+		if (!type || !type.isInstalled || type.isArchived || type.isDeleted || !U.Object.isAllowedObject(type.recommendedLayout)) {
 			type = S.Record.getTypeByKey(J.Constant.default.typeKey);
 		};
 
@@ -605,6 +608,21 @@ class CommonStore {
 
 	getShowSidebarRight (isPopup: boolean): boolean {
 		return Boolean(this.showSidebarRightValue[isPopup ? 'popup' : 'full']);
+	};
+
+	getTimeout (id: string): number {
+		return Number(this.timeoutMap.get(id)) || 0;
+	};
+
+	setTimeout (id: string, timeout: number, func: () => void) {
+		window.clearTimeout(this.getTimeout(id));
+
+		const t = window.setTimeout(() => {
+			this.timeoutMap.delete(id);
+			func();
+		}, timeout);
+
+		this.timeoutMap.set(id, t);
 	};
 
 };

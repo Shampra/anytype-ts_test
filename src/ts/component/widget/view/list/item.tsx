@@ -19,7 +19,7 @@ interface Props extends I.WidgetViewComponent {
 
 const WidgetListItem = observer(forwardRef<{}, Props>((props, ref) => {
 
-	const { subId, id, block, style, isCompact, isEditing, index, isPreview, isSection, hideIcon, onContext } = props;
+	const { subId, id, parent, block, style, isCompact, isEditing, index, isPreview, isSection, hideIcon, onContext } = props;
 	const rootId = keyboard.getRootId();
 	const object = S.Detail.get(subId, id, J.Relation.sidebar);
 	const { isReadonly, isArchived, isHidden, restrictions, source } = object;
@@ -48,7 +48,7 @@ const WidgetListItem = observer(forwardRef<{}, Props>((props, ref) => {
 		e.stopPropagation();
 
 		U.Object.openEvent(e, object);
-		analytics.event('OpenSidebarObject');
+		analytics.event('OpenSidebarObject', { widgetType: analytics.getWidgetType(parent.content.autoAdded) });
 	};
 
 	const onContextHandler = (e: React.SyntheticEvent, withElement: boolean) => {
@@ -97,8 +97,8 @@ const WidgetListItem = observer(forwardRef<{}, Props>((props, ref) => {
 				id={iconKey}
 				key={iconKey}
 				object={object} 
-				size={isCompact ? 18 : 48} 
-				iconSize={isCompact ? 18 : 28}
+				size={isCompact ? 20 : 48} 
+				iconSize={isCompact ? 20 : 28}
 				canEdit={!isReadonly && !isArchived && allowedDetails && U.Object.isTaskLayout(object.layout)} 
 				menuParam={{ 
 					className: 'fixed',
@@ -117,7 +117,7 @@ const WidgetListItem = observer(forwardRef<{}, Props>((props, ref) => {
 	};
 
 	if (hasMore) {
-		more = <Icon className="more" tooltip={translate('widgetOptions')} onMouseDown={e => onContextHandler(e, true)} />;
+		more = <Icon className="more" tooltipParam={{ text: translate('widgetOptions') }} onMouseDown={e => onContextHandler(e, true)} />;
 	};
 	
 	let inner = (
@@ -125,7 +125,7 @@ const WidgetListItem = observer(forwardRef<{}, Props>((props, ref) => {
 			{icon}
 
 			<div className="info">
-				<ObjectName object={object} />
+				<ObjectName object={object} withPlural={true} />
 				{descr}
 			</div>
 

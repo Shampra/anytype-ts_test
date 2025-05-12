@@ -13,13 +13,7 @@ const WidgetViewBoard = observer(forwardRef<{}, I.WidgetViewComponent>((props, r
 	const [ dummy, setDummy ] = useState(0);
 
 	const load = () => {
-		if (!view) {
-			return;
-		};
-
-		S.Record.groupsClear(rootId, blockId);
-
-		if (view.groupRelationKey) {
+		if (view && view.groupRelationKey) {
 			Dataview.loadGroupList(rootId, blockId, view.id, object);
 		} else {
 			setDummy(dummy + 1);
@@ -27,6 +21,7 @@ const WidgetViewBoard = observer(forwardRef<{}, I.WidgetViewComponent>((props, r
 	};
 
 	useEffect(() => load(), []);
+	useEffect(() => load(), [ view?.id ]);
 
 	return (
 		<div className="body">

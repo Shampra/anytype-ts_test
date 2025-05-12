@@ -2,7 +2,7 @@ import * as React from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
 import { AutoSizer, CellMeasurer, InfiniteLoader, List, CellMeasurerCache } from 'react-virtualized';
-import { MenuItemVertical, Filter, Loader, ObjectName, EmptySearch } from 'Component';
+import { MenuItemVertical, Filter, ObjectType, ObjectName, EmptySearch } from 'Component';
 import { I, C, S, U, J, keyboard, Preview, analytics, Action, focus, translate } from 'Lib';
 
 interface State {
@@ -37,6 +37,7 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 		
 		this.onClick = this.onClick.bind(this);
 		this.onFilterChange = this.onFilterChange.bind(this);
+		this.onFilterKeyDown = this.onFilterKeyDown.bind(this);
 		this.loadMoreRows = this.loadMoreRows.bind(this);
 	};
 	
@@ -44,7 +45,7 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 		const { isLoading } = this.state;
 		const { param } = this.props;
 		const { data } = param;
-		const { filter, value, placeholder, label, isBig, noFilter, noIcon, onMore } = data;
+		const { filter, value, placeholder, label, isBig, noFilter, noIcon, onMore, withPlural } = data;
 		const items = this.getItems();
 		const cn = [ 'wrap' ];
 		const placeholderFocus = data.placeholderFocus || translate('commonFilterObjects');
@@ -62,12 +63,12 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 				return null;
 			};
 
-			const type = S.Record.getTypeById(item.type);
 			const checkbox = value && value.length && value.includes(item.id);
 			const cn = [];
 			const props = {
 				...item,
 				object: (item.isAdd || item.isSection || item.isSystem ? undefined : item),
+				withPlural,
 			};
 
 			if (item.isAdd) {
@@ -81,8 +82,10 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 			if (isBig && !item.isAdd) {
 				props.withDescription = true;
 				props.iconSize = 40;
-			} else {
-				props.caption = (type ? type.name : undefined);
+			} else 
+			if (item.type) {
+				const type = S.Record.getTypeById(item.type);
+				props.caption = <ObjectType object={type} />;
 			};
 
 			if (undefined !== item.caption) {
@@ -104,7 +107,7 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 					<MenuItemVertical
 						{...props}
 						index={param.index}
-						name={<ObjectName object={item} />}
+						name={<ObjectName object={item} withPlural={withPlural} />}
 						onMouseEnter={e => this.onMouseEnter(e, item)}
 						onClick={e => this.onClick(e, item)}
 						onMore={onMore ? e => onMore(e, item) : undefined}
@@ -126,6 +129,7 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 						placeholderFocus={placeholderFocus} 
 						value={filter}
 						onChange={this.onFilterChange} 
+						onKeyDown={this.onFilterKeyDown}
 						focusOnMount={true}
 					/>
 				) : ''}
@@ -310,15 +314,16 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 			filters.push({ relationKey: 'isReadonly', condition: I.FilterCondition.Equal, value: false });
 		};
 		if ([ I.NavigationType.Move, I.NavigationType.LinkTo, I.NavigationType.Link ].includes(type)) {
-			filters.push({ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getSystemLayouts() });
-			filters.push({ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotEqual, value: J.Constant.typeKey.template });
+			filters.push({ relationKey: 'resolvedLayout', condition: I.FilterCondition.NotIn, value: U.Object.getSystemLayouts().filter(it => !U.Object.isTypeLayout(it)) });
+			filters.push({ relationKey: 'type.uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template ] });
+			filters.push({ relationKey: 'uniqueKey', condition: I.FilterCondition.NotIn, value: [ J.Constant.typeKey.template, J.Constant.typeKey.type ] });
 		};
 
 		if (clear) {
 			this.setState({ isLoading: true });
 		};
 
-		U.Data.search({
+		U.Subscription.search({
 			spaceId,
 			filters,
 			sorts,
@@ -468,6 +473,19 @@ const MenuSearchObject = observer(class MenuSearchObject extends React.Component
 			};
 		} else {
 			process(item, false);
+		};
+	};
+
+	onFilterKeyDown (e: any, v: string) {
+		const { param, close } = this.props;
+		const { data } = param;
+		const { onBackspaceClose } = data;
+
+		if (onBackspaceClose && !v) {
+			keyboard.shortcut('backspace', e, () => {
+				close();
+				onBackspaceClose();
+			});
 		};
 	};
 

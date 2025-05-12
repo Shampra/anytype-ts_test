@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Title, Label, Button, Icon, Select, Switch, Error } from 'Component';
-import { I, S, translate, keyboard, Action } from 'Lib';
+import { I, S, U, translate, keyboard, Action } from 'Lib';
 
 interface State {
 	error: string;
@@ -25,17 +25,12 @@ class PageMainSettingsImportCsv extends React.Component<I.PageSettingsComponent,
 	render () {
 		this.init();
 
-		const { config } = S.Common;
 		const { error } = this.state;
 		const { delimiter, delimiters } = this.delimiterOptions();
-
 		const modeOptions: any[] = [ 
 			{ id: I.CsvImportMode.Collection, name: translate('popupSettingsImportCsvCollection') },
+			{ id: I.CsvImportMode.Table, name: translate('popupSettingsImportCsvTable') }
 		];
-
-		if (config.experimental) {
-			modeOptions.unshift({ id: I.CsvImportMode.Table, name: translate('popupSettingsImportCsvTable') });
-		};
 
 		return (
 			<div>
@@ -192,6 +187,8 @@ class PageMainSettingsImportCsv extends React.Component<I.PageSettingsComponent,
 				this.setState({ error: message.error.description });
 				return;
 			};
+
+			U.Space.openDashboard();
 		});
 	};
 

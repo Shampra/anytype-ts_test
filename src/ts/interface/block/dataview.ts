@@ -150,6 +150,7 @@ export interface ViewComponent {
 	className?: string;
 	refCells?: any;
 	recordId?: string;
+	recordIdx?: number;
 	getRecord?(id: string): any;
 	getRecords?(): string[];
 	onRef?(ref: any, id: string): void;
@@ -165,13 +166,14 @@ export interface ViewComponent {
 	getTypeId?(): string;
 	getTemplateId?(): string;
 	getEmpty?(type: string): any;
+	getSubId?(): string;
 	onRecordAdd?: (e: any, dir: number, groupId?: string) => void;
 	onTemplateAdd?: () => void;
 	onSortAdd?: (item: any, callBack?: () => void) => void;
 	onFilterAdd?: (item: any, callBack?: () => void) => void;
 	onTemplateMenu?: (e: any, dur: number) => void;
 	onCellClick?(e: any, key: string, id?: string, record?: any): void;
-	onContext?(e: any, id: string): void;
+	onContext?(e: any, id: string, subId?: string): void;
 	onCellChange?: (id: string, key: string, value: any, callBack?: (message: any) => void) => void;
 	onDragRecordStart?: (e: any, id?: string) => void;
 	onSelectToggle?: (e: React.MouseEvent, id: string) => void;
@@ -270,6 +272,7 @@ export interface CellRef {
 	isEditing?(): boolean;
 	onChange?(value: any): void;
 	getValue?(): any;
+	canEdit?(): boolean;
 };
 
 export interface BoardGroup {

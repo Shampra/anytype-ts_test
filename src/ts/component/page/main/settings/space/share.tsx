@@ -2,7 +2,7 @@ import * as React from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
 import { Title, Label, Icon, Input, Button, IconObject, ObjectName, Tag, Error, Loader } from 'Component';
-import { I, C, S, U, translate, Preview, Action, analytics, sidebar, } from 'Lib';
+import { I, C, S, U, translate, Preview, Action, analytics, sidebar, keyboard, } from 'Lib';
 import { AutoSizer, WindowScroller, CellMeasurer, CellMeasurerCache, List } from 'react-virtualized';
 
 interface State {
@@ -54,6 +54,7 @@ const PageMainSettingsSpaceShare = observer(class PageMainSettingsSpaceShare ext
 		};
 
 		const { membership } = S.Auth;
+		const tier = U.Data.getMembershipTier(membership.tier);
 		const hasLink = cid && key;
 		const space = U.Space.getSpaceview();
 		const participant = U.Space.getParticipant();
@@ -62,13 +63,20 @@ const PageMainSettingsSpaceShare = observer(class PageMainSettingsSpaceShare ext
 		const isShareActive = U.Space.isShareActive();
 		const isSpaceOwner = U.Space.isMyOwner();
 
+		let inviteLinkLabelText = '';
 		let limitLabel = '';
 		let limitButton = '';
 		let showLimit = false;
 		let memberUpgradeType = '';
 
+		if (!hasLink && !isSpaceOwner) {
+			inviteLinkLabelText = translate('popupSettingsSpaceShareInviteLinkDisabled');
+		} else {
+			inviteLinkLabelText = translate('popupSettingsSpaceShareInviteLinkLabel');
+		};
+
 		if (space.isShared) {
-			if (!U.Space.getReaderLimit() && membership.isExplorer) {
+			if (!U.Space.getReaderLimit() && tier?.price) {
 				limitLabel = translate('popupSettingsSpaceShareInvitesReaderLimitReachedLabel');
 				limitButton = translate('popupSettingsSpaceShareInvitesReaderLimitReachedButton');
 				memberUpgradeType = 'members';
@@ -180,7 +188,7 @@ const PageMainSettingsSpaceShare = observer(class PageMainSettingsSpaceShare ext
 
 				<div id="sectionInvite" className="section sectionInvite">
 					<Title text={translate('popupSettingsSpaceShareInviteLinkTitle')} />
-					<Label text={translate('popupSettingsSpaceShareInviteLinkLabel')} />
+					<Label text={inviteLinkLabelText} />
 
 					{hasLink ? (
 						<div className="inviteLinkWrapper">
@@ -191,20 +199,27 @@ const PageMainSettingsSpaceShare = observer(class PageMainSettingsSpaceShare ext
 							<Button ref={ref => this.refCopy = ref} onClick={this.onCopy} className="c40" color="blank" text={translate('commonCopyLink')} />
 						</div>
 					) : (
-						<div className="buttons">
-							<Button
-								ref={ref => this.refButton = ref}
-								onClick={isShareActive ? () => this.onInitLink() : null}
-								className={[ 'c40', (isShareActive ? '' : 'disabled') ].join(' ')}
-								tooltip={isShareActive ? '' : translate('popupSettingsSpaceShareGenerateInviteDisabled')}
-								text={translate('popupSettingsSpaceShareGenerateInvite')}
-							/>
-						</div>
+						<>
+							{isSpaceOwner ? (
+								<div className="buttons">
+									<Button
+										ref={ref => this.refButton = ref}
+										onClick={isShareActive ? () => this.onInitLink() : null}
+										className={[ 'c40', (isShareActive ? '' : 'disabled') ].join(' ')}
+										tooltipParam={{ text: isShareActive ? '' : translate('popupSettingsSpaceShareGenerateInviteDisabled') }}
+										text={translate('popupSettingsSpaceShareGenerateInvite')}
+									/>
+								</div>
+							) : ''}
+						</>
 					)}
 				</div>
 
 				<div id="sectionMembers" className="section sectionMembers">
-					<Title text={translate('commonMembers')} />
+					<div className="membersTitle">
+						<Title text={translate('commonMembers')} />
+						{length > 1 ? <Label text={String(length)} /> : ''}
+					</div>
 
 					{showLimit ? (
 						<div className="row payment">
@@ -256,6 +271,8 @@ const PageMainSettingsSpaceShare = observer(class PageMainSettingsSpaceShare ext
 
 		this.init();
 		this.forceUpdate();
+
+		analytics.event('ScreenSettingsSpaceShare');
 	};
 
 	componentDidUpdate() {
@@ -378,13 +395,14 @@ const PageMainSettingsSpaceShare = observer(class PageMainSettingsSpaceShare ext
 
 	getParticipantOptions () {
 		const { membership } = S.Auth;
+		const tier = U.Data.getMembershipTier(membership.tier);
 
 		let items: any[] = [] as any[];
 
-		if (membership.isExplorer || (U.Space.getReaderLimit() - 1 >= 0)) {
+		if (!tier?.price || (U.Space.getReaderLimit() - 1 >= 0)) {
 			items.push({ id: I.ParticipantPermissions.Reader });
 		};
-		if (membership.isExplorer || (U.Space.getWriterLimit() - 1 >= 0)) {
+		if (!tier?.price || (U.Space.getWriterLimit() - 1 >= 0)) {
 			items.push({ id: I.ParticipantPermissions.Writer });
 		};
 

@@ -27,6 +27,7 @@ import PopupMembershipFinalization from './membership/finalization';
 import PopupShare from './share';
 import PopupSpaceCreate from './spaceCreate';
 import PopupLogout from './logout';
+import PopupOnboarding from './onboarding';
 
 class Popup extends React.Component<I.Popup> {
 
@@ -74,6 +75,7 @@ class Popup extends React.Component<I.Popup> {
 			share:					 PopupShare,
 			spaceCreate:			 PopupSpaceCreate,
 			logout: 				 PopupLogout,
+			onboarding:				 PopupOnboarding,
 		};
 		
 		const popupId = this.getId();
@@ -84,7 +86,7 @@ class Popup extends React.Component<I.Popup> {
 			cn.push(className);
 		};
 
-		if (S.Popup.showDimmerIds().includes(id)) {
+		if (!S.Popup.noDimmerIds().includes(id)) {
 			cn.push('showDimmer');
 		};
 		
@@ -189,7 +191,7 @@ class Popup extends React.Component<I.Popup> {
 			const height = inner.outerHeight();
 
 			let sw = 0;
-			if (!S.Popup.showDimmerIds().includes(id)) {
+			if (S.Popup.noDimmerIds().includes(id)) {
 				sw = sidebar.getDummyWidth();
 			};
 
@@ -227,7 +229,8 @@ class Popup extends React.Component<I.Popup> {
 	};
 
 	storageSet (data: any) {
-		Storage.set(this.getId(), data);
+		const current = this.storageGet();
+		Storage.set(this.getId(), Object.assign(current, data));
 	};
 
 	getId (): string {

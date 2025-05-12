@@ -33,7 +33,6 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 		const cn = [ 'viewContent', className ];
 		const data = this.getData();
 		const { m, y } = this.getDateParam(value);
-		const today = this.getDateParam(U.Date.now());
 		const days = U.Date.getWeekDays();
 		const months = U.Date.getMonths();
 		const years = U.Date.getYears(0, 3000);
@@ -70,10 +69,10 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 
 				<div className="wrap">
 					<div className={cn.join(' ')}>
-						<div className="table customScrollbar">
+						<div className="table">
 							<div className="head">
 								{days.map((item, i) => (
-									<div key={i} className="item">
+									<div key={i} className={`item c${i}`}>
 										{item.name.substring(0, 2)}
 									</div>
 								))}
@@ -81,7 +80,7 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 
 							<div className="body">
 								{data.map((item, i) => {
-									const cn = [];
+									const cn = [ `c${item.wd}` ];
 									const current = [ item.d, item.m, item.y ].join('-');
 
 									let isToday = false;
@@ -89,9 +88,12 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 									if (m != item.m) {
 										cn.push('other');
 									};
-									if ((today.d == item.d) && (today.m == item.m) && (today.y == item.y)) {
+									if (item.isToday) {
 										cn.push('active');
 										isToday = true;
+									};
+									if (item.isWeekend) {
+										cn.push('weekend');
 									};
 									if (i < 7) {
 										cn.push('first');
@@ -147,13 +149,8 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 		return U.Date.getCalendarMonth(this.state.value);
 	};
 
-	getSubId () {
-		const { rootId, block } = this.props;
-		return S.Record.getSubId(rootId, block.id);
-	};
-
 	load () {
-		const { isCollection, getView, getKeys, getTarget, getSearchIds } = this.props;
+		const { isCollection, getView, getKeys, getTarget, getSearchIds, getSubId } = this.props;
 		const object = getTarget();
 		const view = getView();
 		if (!view) {
@@ -179,7 +176,7 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 		].concat(view.filters as any[]);
 		const sorts: I.Sort[] = [].concat(view.sorts);
 		const searchIds = getSearchIds();
-		const subId = this.getSubId();
+		const subId = getSubId();
 
 		filters.push({ 
 			relationKey: relation.relationKey, 
@@ -201,7 +198,7 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 			filters.push({ relationKey: 'id', condition: I.FilterCondition.In, value: searchIds || [] });
 		};
 
-		U.Data.searchSubscribe({
+		U.Subscription.subscribe({
 			subId,
 			filters: filters.map(it => Dataview.filterMapper(view, it)),
 			sorts: sorts.map(it => Dataview.filterMapper(view, it)),
@@ -285,10 +282,10 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 	};
 
 	getItems () {
-		const { getView } = this.props;
+		const { getView, getSubId } = this.props;
 		const view = getView();
 
-		return S.Record.getRecords(this.getSubId(), [ view.groupRelationKey ]).map(it => {
+		return S.Record.getRecords(getSubId(), [ view.groupRelationKey ]).map(it => {
 			it._date = U.Date.date('j-n-Y', it[view.groupRelationKey]);
 			return it;
 		});
@@ -309,14 +306,12 @@ const ViewCalendar = observer(class ViewCalendar extends React.Component<I.ViewC
 
 		const container = U.Common.getPageContainer(isPopup);
 		const cw = container.width();
-		const ch = container.height();
 		const mw = cw - PADDING * 2;
 		const margin = (cw - mw) / 2;
-		const { top } = node.offset();
 		const day = node.find('.day').first();
 		const menu = S.Menu.get('calendarDay');
 
-		wrap.css({ width: cw, height: Math.max(600, ch - top - 130), marginLeft: -margin - 2 });
+		wrap.css({ width: cw, marginLeft: -margin - 2 });
 		win.trigger('resize.menuCalendarDay');
 
 		if (menu && !menu.param.data.fromWidget && day.length) {

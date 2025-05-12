@@ -41,9 +41,12 @@ class RecordStore {
 
 	clearAll () {
 		this.relationMap.clear();
+		this.relationKeyMap.clear();
+		this.typeKeyMap.clear();
 		this.viewMap.clear();
 		this.recordMap.clear();
 		this.metaMap.clear();
+		this.groupMap.clear();
 	};
 
 	keyMapGet (type: string, spaceId: string) {
@@ -65,15 +68,8 @@ class RecordStore {
 	};
 
 	relationKeyMapGet (key: string): string {
-		let map = this.keyMapGet(KeyMapType.Relation, S.Common.space);
-		let ret = map.get(key);
-
-		if (!ret) {
-			map = this.keyMapGet(KeyMapType.Relation, J.Constant.storeSpaceId);
-			ret = map.get(key);
-		};
-
-		return ret;
+		const map = this.keyMapGet(KeyMapType.Relation, S.Common.space);
+		return map?.get(key);
 	};
 
 	typeKeyMapSet (spaceId: string, key: string, id: string) {
@@ -335,7 +331,7 @@ class RecordStore {
 	};
 
 	getDataviewRelations (rootId: string, blockId: string): any[] {
-		return this.getDataviewRelationKeys(rootId, blockId).map(it => this.getRelationByKey(it)).filter(it => it);
+		return [ 'name' ].concat(this.getDataviewRelationKeys(rootId, blockId)).map(it => this.getRelationByKey(it)).filter(it => it);
 	};
 
 	getObjectRelations (rootId: string, typeId: string): any[] {
@@ -350,6 +346,7 @@ class RecordStore {
 	getConflictRelations (rootId: string, blockId: string, typeId: string): any[] {
 		const objectKeys = S.Detail.getKeys(rootId, blockId);
 		const typeKeys = U.Object.getTypeRelationKeys(typeId);
+		const skipKeys = [ 'name', 'description' ];
 
 		let conflictKeys = [];
 
@@ -363,7 +360,9 @@ class RecordStore {
 			conflictKeys = objectKeys;
 		};
 
-		conflictKeys = conflictKeys.map(it => this.getRelationByKey(it)).filter(it => it && !Relation.isSystem(it.relationKey));
+		conflictKeys = conflictKeys.filter(it => !skipKeys.includes(it));
+		conflictKeys = conflictKeys.map(it => this.getRelationByKey(it)).filter(it => it);
+
 		return this.checkHiddenObjects(conflictKeys);
 	};
 
@@ -445,7 +444,7 @@ class RecordStore {
 			return [];
 		};
 
-		return records.filter(it => hiddenObject ? true : !it.isHidden);
+		return records.filter(it => it && (hiddenObject ? true : !it.isHidden));
 	};
 
 };

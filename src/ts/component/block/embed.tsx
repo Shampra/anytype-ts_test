@@ -470,7 +470,9 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 
 		this.range = this.getRange();
 
-		S.Common.filterSet(this.range.from, '');
+		if (this.range) {
+			S.Common.filterSet(this.range.from, '');
+		};
 		this.onLatexMenu(e, 'select', true);
 	};
 
@@ -483,10 +485,7 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 		const win = $(window);
 
 		const recalcRect = () => {
-			let rect = null;
-			if (element == 'input') {
-				rect = U.Common.getSelectionRect();
-			};
+			const rect = element == 'input' ? U.Common.getSelectionRect() : null;
 			return rect ? { ...rect, y: rect.y + win.scrollTop() } : null;
 		};
 
@@ -501,9 +500,7 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 			commonFilter: true,
 			className: (isTemplate ? 'isTemplate' : ''),
 			subIds: J.Menu.latex,
-			onClose: () => {
-				S.Common.filterSet(0, '');
-			},
+			onClose: () => S.Common.filterSet(0, ''),
 			data: {
 				isTemplate: isTemplate,
 				rootId: rootId,

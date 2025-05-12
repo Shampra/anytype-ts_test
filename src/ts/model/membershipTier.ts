@@ -4,6 +4,7 @@ const COLORS = [
 	'green',
 	'blue',
 	'red',
+	'ice',
 ];
 
 class MembershipTier implements I.MembershipTier {
@@ -19,6 +20,7 @@ class MembershipTier implements I.MembershipTier {
 	priceCents = 0;
 	features = [];
 	namesCount = 0;
+	offer = '';
 
 	constructor (props: Partial<I.MembershipTier>) {
 		this.id = Number(props.id) || I.TierType.None;
@@ -32,6 +34,7 @@ class MembershipTier implements I.MembershipTier {
 		this.priceCents = Number(props.priceCents) || 0;
 		this.features = Array.isArray(props.features) ? props.features : [];
 		this.namesCount = Number(props.namesCount) || 0;
+		this.offer = String(props.offer || '');
 	};
 
 	get color (): string {
@@ -46,8 +49,8 @@ class MembershipTier implements I.MembershipTier {
 		return this.id == I.TierType.None;
 	};
 
-	get isExplorer (): boolean {
-		return this.id == I.TierType.Explorer;
+	get isStarter (): boolean {
+		return this.id == I.TierType.Starter;
 	};
 
 	get isBuilder (): boolean {
