@@ -191,7 +191,8 @@
 		"https://codepen.io",
 		"https://cdpn.io",
 		"https://kroki.io",
-		"https://sketchfab.com"
+		"https://sketchfab.com",
+		"https://embed.diagrams.net"
 	],
 
 	"worker-src": [ 
