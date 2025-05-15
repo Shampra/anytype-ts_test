@@ -16,7 +16,7 @@ interface Props extends I.BlockComponent {
 	subId: string;
 	onScrollToBottomClick: () => void;
 	scrollToBottom: () => void;
-	scrollToMessage: (id: string, animate?: boolean) => void;
+	scrollToMessage: (id: string, animate?: boolean, highlight?: boolean) => void;
 	loadMessagesByOrderId: (orderId: string, callBack?: () => void) => void;
 	getMessages: () => I.ChatMessage[];
 	getMessagesInViewport: () => any[];
@@ -360,23 +360,21 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 			this.onSend();
 		});
 
-		if (range && range.to) {
-			keyboard.shortcut('backspace', e, () => {
-				const parsed = checkMarkOnBackspace(value, range, this.marks);
+		keyboard.shortcut('backspace', e, () => {
+			const parsed = checkMarkOnBackspace(value, range, this.marks);
 
-				if (!parsed.save) {
-					return;
-				};
+			if (!parsed.save) {
+				return;
+			};
 
-				e.preventDefault();
+			e.preventDefault();
 
-				value = parsed.value;
-				this.marks = parsed.marks;
+			value = parsed.value;
+			this.marks = parsed.marks;
 
-				const l = value.length;
-				this.updateMarkup(value, { from: l, to: l });
-			});
-		};
+			const l = value.length;
+			this.updateMarkup(value, { from: l, to: l });
+		});
 
 		keyboard.shortcut('chatObject', e, () => {
 			if (!S.Menu.isOpen('searchObject')) {
@@ -719,7 +717,7 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 					update.content.marks = marks;
 
 					C.ChatEditMessageContent(rootId, this.editingId, update, () => {
-						scrollToMessage(this.editingId, true);
+						scrollToMessage(this.editingId, true, true);
 						clear();
 					});
 				};
@@ -900,7 +898,7 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 				const target = messages.find(it => it.orderId == mentionOrderId);
 
 				if (target) {
-					scrollToMessage(target.id, true);
+					scrollToMessage(target.id, true, true);
 				} else {
 					loadMessagesByOrderId(mentionOrderId, () => {
 						highlightMessage('', mentionOrderId);
