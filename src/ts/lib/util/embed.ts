@@ -239,6 +239,7 @@ class UtilEmbed {
 				const allowedHosts = [
 					'app.diagrams.net',
 					'embed.diagrams.net',
+					'viewer.diagrams.net',
 					'draw.io',
 				];
 
@@ -367,6 +368,7 @@ class UtilEmbed {
 			I.EmbedProcessor.Bilibili,
 			I.EmbedProcessor.Kroki,
 			I.EmbedProcessor.Sketchfab,
+			I.EmbedProcessor.Drawio,
 			I.EmbedProcessor.Image,
 		].includes(p);
 	};
