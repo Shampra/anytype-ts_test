@@ -13,6 +13,7 @@ DOMAINS[I.EmbedProcessor.Bilibili] = [ 'bilibili.com', 'b23.tv'];
 DOMAINS[I.EmbedProcessor.Kroki] = [ 'kroki.io' ];
 DOMAINS[I.EmbedProcessor.GithubGist] = [ 'gist.github.com' ];
 DOMAINS[I.EmbedProcessor.Sketchfab] = [ 'sketchfab.com' ];
+DOMAINS[I.EmbedProcessor.Drawio] = [ 'diagrams.net' ];
 
 const IFRAME_PARAM = 'frameborder="0" scrolling="no" allowfullscreen';
 
@@ -79,6 +80,10 @@ class UtilEmbed {
 	};
 
 	getSketchfabHtml (content: string): string {
+		return `<iframe src="${content}" ${IFRAME_PARAM}></iframe>`;
+	};
+
+	getDrawioHtml (content: string): string {
 		return `<iframe src="${content}" ${IFRAME_PARAM}></iframe>`;
 	};
 
@@ -227,6 +232,27 @@ class UtilEmbed {
 
 				url = `https://sketchfab.com/models/${id}/embed`;
 				break;
+			};
+
+			case I.EmbedProcessor.Drawio: {
+				const u = new URL(url);
+				const allowedHosts = [
+					'app.diagrams.net',
+					'embed.diagrams.net',
+					'draw.io',
+				];
+
+				if (!allowedHosts.includes(u.hostname)) {
+					break;
+				}
+
+				// Force le paramètre embed=1 si absent
+				if (u.hostname === 'embed.diagrams.net' && !u.searchParams.has('embed')) {
+					u.searchParams.set('embed', '1');
+				}
+
+				u.hash = '';
+				url = u.toString();
 			};
 
 			case I.EmbedProcessor.GithubGist: {
