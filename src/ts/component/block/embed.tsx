@@ -630,7 +630,7 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 						className: U.Data.blockEmbedClass(processor),
 						blockId: block.id,
 					};
-
+					console.log(data);
 					// Fix Bilibili schemeless urls and autoplay
 					if (block.isEmbedBilibili()) {
 						if (text.match(/src="\/\/player[^"]+"/)) {
@@ -667,6 +667,10 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 					if (block.isEmbedTelegram()) {
 						const m = text.match(/post="([^"]+)"/);
 						allowScript = !!(m && m.length && text.match(/src="https:\/\/telegram.org([^"]+)"/));
+					};
+
+					if (block.isEmbedDrawio()) {
+						allowScript = !!text.match(/https:\/\/(?:viewer|embed|app)\.diagrams\.net\/\?[^"\s>]*/);
 					};
 
 					if (allowScript) {
