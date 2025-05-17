@@ -165,7 +165,8 @@
 		"https://*.codepenassets.com",
 		"https://*.bstarstatic.com",
 		"https://*.googletagmanager.com",
-		"https://*.facebook.net"
+		"https://*.facebook.net",
+		"https://*.diagrams.net"
 	],
 
 	"frame-src": [
@@ -192,8 +193,7 @@
 		"https://cdpn.io",
 		"https://kroki.io",
 		"https://sketchfab.com",
-		"https://embed.diagrams.net",
-		"https://viewer.diagrams.net"
+		"https://*.diagrams.net"
 	],
 
 	"worker-src": [ 

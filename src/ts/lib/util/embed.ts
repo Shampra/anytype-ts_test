@@ -235,26 +235,9 @@ class UtilEmbed {
 			};
 
 			case I.EmbedProcessor.Drawio: {
-				const u = new URL(url);
-				const allowedHosts = [
-					'app.diagrams.net',
-					'embed.diagrams.net',
-					'viewer.diagrams.net',
-					'draw.io',
-				];
-
-				if (!allowedHosts.includes(u.hostname)) {
-					break;
-				}
-
-				// Force le paramètre embed=1 si absent
-				if (u.hostname === 'embed.diagrams.net' && !u.searchParams.has('embed')) {
-					u.searchParams.set('embed', '1');
-				}
-
-				u.hash = '';
-				url = u.toString();
-			};
+				// On garde l'URL telle quelle, sans toucher au fragment
+				break;
+			}
 
 			case I.EmbedProcessor.GithubGist: {
 				const a = url.split('#');
@@ -422,6 +405,7 @@ class UtilEmbed {
 			I.EmbedProcessor.Bilibili,
 			I.EmbedProcessor.Graphviz,
 			I.EmbedProcessor.Kroki,
+			I.EmbedProcessor.Drawio,
 			I.EmbedProcessor.Image,
 		].includes(p);
 	};
