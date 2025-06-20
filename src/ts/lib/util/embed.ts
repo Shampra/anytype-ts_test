@@ -517,7 +517,6 @@ class UtilEmbed {
 			I.EmbedProcessor.Codepen,
 			I.EmbedProcessor.Kroki,
 			I.EmbedProcessor.Chart,
-			I.EmbedProcessor.Drawio,
 		].includes(p);
 	};
 
