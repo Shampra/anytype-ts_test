@@ -1,6 +1,6 @@
 import React, { forwardRef, useRef, useState, useImperativeHandle, useEffect } from 'react';
 import { Loader, Title, Error, Frame, Button, Footer } from 'Component';
-import { I, C, S, U, J, translate } from 'Lib';
+import { I, C, S, U, J, translate, Preview, Onboarding } from 'Lib';
 
 interface PageMainInviteRefProps {
 	resize: () => void;
@@ -8,7 +8,7 @@ interface PageMainInviteRefProps {
 
 const PageMainInvite = forwardRef<PageMainInviteRefProps, I.PageComponent>((props, ref) => {
 
-	const { isPopup, match, location } = props;
+	const { isPopup, location } = props;
 	const nodeRef = useRef(null);
 	const frameRef = useRef(null);
 	const cidRef = useRef('');
@@ -27,6 +27,7 @@ const PageMainInvite = forwardRef<PageMainInviteRefProps, I.PageComponent>((prop
 
 		const request = (invite) => {
 			S.Popup.open('inviteRequest', { 
+				onClose: () => Onboarding.start('basics', isPopup),
 				data: { 
 					invite, 
 					cid, 
@@ -54,11 +55,11 @@ const PageMainInvite = forwardRef<PageMainInviteRefProps, I.PageComponent>((prop
 						let text = '';
 
 						if (errorCodes.includes(code)) {
-							icon = 'error';
+							icon = code == J.Error.Code.SpaceInviteView.INVITE_NOT_FOUND ? 'noaccess' : 'error';
 							title = translate(`popupConfirmInviteError${code}Title`);
 							text = translate(`popupConfirmInviteError${code}Text`);
 						} else {
-							icon = 'sad';
+							icon = 'error';
 							title = translate('popupInviteRequestTitle');
 							text = translate('popupConfirmInviteError');
 						};
@@ -92,7 +93,32 @@ const PageMainInvite = forwardRef<PageMainInviteRefProps, I.PageComponent>((prop
 							request(message);
 						};
 					} else {
-						request(message);
+						if (message.inviteType == I.InviteType.WithoutApprove) {
+							const { account } = S.Auth;
+							const spaceName = message.spaceName || translate('defaultNamePage');
+							const creatorName = message.creatorName || translate('defaultNamePage');
+
+							S.Popup.open('confirm', {
+								onClose: () => Onboarding.start('basics', isPopup),
+								data: {
+									icon: 'join',
+									title: U.Common.sprintf(translate('popupConfirmJoinSpaceTitle'), spaceName),
+									text: U.Common.sprintf(translate('popupConfirmJoinSpaceText'), spaceName, creatorName),
+									textConfirm: translate('popupConfirmJoinSpaceButtonConfirm'),
+									onConfirm: () => {
+										C.SpaceJoin(account.info.networkId, message.spaceId, cid, key, () => {
+											if (message.error.code) {
+												setError(message.error.description);
+											} else {
+												Preview.toastShow({ text: U.Common.sprintf(translate('toastJoinSpace'), spaceName) });
+											};
+										});
+									},
+								},
+							});
+						} else {
+							request(message);
+						};
 					};
 				});
 			});

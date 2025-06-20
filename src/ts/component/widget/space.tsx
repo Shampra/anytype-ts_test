@@ -17,6 +17,7 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 	const alt = keyboard.altSymbol();
 	const buttons = [
 		{ id: 'search', name: translate('commonSearch') },
+		{ id: 'all', name: translate('commonAllContent') },
 		!space.isPersonal ? { id: 'member', name: translate('pageSettingsSpaceIndexInviteMembers') } : null,
 	].filter(it => it);
 
@@ -54,6 +55,11 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 		e.stopPropagation();
 
 		switch (item.id) {
+			case 'all': {
+				sidebar.leftPanelSetState({ page: 'object' });
+				break;
+			};
+
 			case 'member': {
 				U.Object.openRoute({ id: 'spaceShare', layout: I.ObjectLayout.Settings });
 				analytics.event('ClickSpaceWidgetInvite', { route: analytics.route.widget });
@@ -83,8 +89,8 @@ const WidgetSpace = observer(forwardRef<{}, I.WidgetComponent>((props, ref) => {
 					<IconObject 
 						id="widget-space-icon" 
 						object={{ ...space, layout: I.ObjectLayout.SpaceView }} 
-						size={18}
-						iconSize={18}
+						size={20}
+						iconSize={20}
 						menuParam={{ className: 'fixed' }}
 					/>
 					<div className="txt">

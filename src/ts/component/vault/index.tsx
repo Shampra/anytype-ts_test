@@ -37,7 +37,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 	const itemsWithCounterIds = itemsWithCounter.map(it => it.id);
 	const itemsWithoutCounter = items.filter(it => !itemsWithCounterIds.includes(it.id));
 	const itemAdd = { id: 'add', name: translate('commonNewSpace'), isButton: true };
-	const itemSettings = { ...profile, id: 'settings', layout: I.ObjectLayout.Human };
+	const itemSettings = { ...profile, id: 'settings', tooltip: translate('commonAppSettings'), layout: I.ObjectLayout.Human };
 	const canCreate = U.Space.canCreateSpace();
 
 	const cn = [ 'vault' ];
@@ -80,13 +80,9 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 			pressed.current.add(key);
 		};
 
-		if ([ Key.ctrl, Key.tab, Key.shift ].includes(key)) {
-			pressed.current.add(key);
-		};
-
-		keyboard.shortcut('nextSpace, prevSpace', e, pressed => {
+		keyboard.shortcut('prevSpace, nextSpace', e, pressed => {
 			checkKeyUp.current = true;
-			onArrow(pressed.match('shift') ? -1 : 1);
+			onArrow(pressed == 'prevSpace' ? -1 : 1);
 
 			if (sidebar.isAnimating) {
 				return;
@@ -114,9 +110,10 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 		pressed.current.delete(key);
 
 		if (
-			(pressed.current.has(Key.ctrl) || 
-			pressed.current.has(Key.tab) || 
-			pressed.current.has(Key.shift)) ||
+			(
+				pressed.current.has(Key.ctrl) || 
+				pressed.current.has(Key.tab)
+			) ||
 			!checkKeyUp.current
 		) {
 			return;
@@ -157,7 +154,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 
 		switch (item.id) {
 			case 'add': {
-				Action.createSpace(analytics.route.vault);
+				onAdd();
 				break;
 			};
 
@@ -180,6 +177,17 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 				break;
 			};
 		};
+	};
+
+	const onAdd = () => {
+		const param = {
+			element: `#vault #item-add`,
+			className: 'spaceCreate fixed',
+			classNameWrap: 'fromSidebar',
+			offsetY: 4,
+		};
+
+		Action.spaceCreateMenu(param, analytics.route.vault);
 	};
 
 	const onArrow = (dir: number) => {
@@ -292,7 +300,7 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 		const element = node.find(`#item-${item.id}`);
 
 		Preview.tooltipShow({ 
-			text: U.Common.htmlSpecialChars(item.name), 
+			text: U.Common.htmlSpecialChars(item.tooltip || item.name), 
 			element, 
 			className: 'fromVault', 
 			typeX: I.MenuDirection.Left,
@@ -346,10 +354,6 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 					onDragEnd={onSortEnd}
 					modifiers={[ restrictToVerticalAxis, restrictToFirstScrollableAncestor ]}
 				>
-					<SortableContext
-						items={items.map((item) => item.id)}
-						strategy={verticalListSortingStrategy}
-					>
 						<div id="scroll" className="side top" onScroll={onScroll}>
 							{itemsWithCounter.map((item, i) => (
 								<VaultItem 
@@ -364,18 +368,22 @@ const Vault = observer(forwardRef<VaultRefProps>((props, ref) => {
 
 							{itemsWithCounter.length > 0 ? <div className="div" /> : ''}
 
-							{itemsWithoutCounter.map((item, i) => (
-								<VaultItem 
-									key={`item-space-${item.id}`}
-									item={item}
-									onClick={e => onClick(e, item)}
-									onMouseEnter={e => onMouseEnter(e, item)}
-									onMouseLeave={() => Preview.tooltipHide()}
-									onContextMenu={item.isButton ? null : e => onContextMenu(e, item)}
-								/>
-							))}
+							<SortableContext
+								items={itemsWithoutCounter.map(item => item.id)}
+								strategy={verticalListSortingStrategy}
+							>
+								{itemsWithoutCounter.map((item, i) => (
+									<VaultItem 
+										key={`item-space-${item.id}`}
+										item={item}
+										onClick={e => onClick(e, item)}
+										onMouseEnter={e => onMouseEnter(e, item)}
+										onMouseLeave={() => Preview.tooltipHide()}
+										onContextMenu={item.isButton ? null : e => onContextMenu(e, item)}
+									/>
+								))}
+							</SortableContext>
 						</div>
-					</SortableContext>
 				</DndContext>
 				<div className="side bottom" onDragStart={e => e.preventDefault()}>
 					{canCreate ? (

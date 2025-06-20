@@ -62,7 +62,7 @@ const ViewGrid = observer(class ViewGrid extends React.Component<I.ViewComponent
 		} else {
 			content = (
 				<InfiniteLoader
-					loadMoreRows={() => {}}
+					loadMoreRows={this.loadMoreRows}
 					isRowLoaded={({ index }) => !!records[index]}
 					rowCount={total}
 					threshold={10}
@@ -243,12 +243,12 @@ const ViewGrid = observer(class ViewGrid extends React.Component<I.ViewComponent
 
 		if (isPopup) {
 			return;
-		} else {
-			cy = top - sy;
-			threshold = J.Size.header;
-			x = left + sx;
-			y = threshold;
 		};
+
+		cy = top - sy;
+		threshold = J.Size.header;
+		x = left + sx;
+		y = threshold;
 
 		let clone = node.find('#rowHeadClone');
 
@@ -272,7 +272,7 @@ const ViewGrid = observer(class ViewGrid extends React.Component<I.ViewComponent
 		};
 
 		if (cy <= threshold) {
-			clone.css({ left: x, top: y, width: rowHead.width(), transform: `translate3d(${-sx}px,0px,0px)`	});
+			clone.css({ left: x, top: y, width: rowHead.outerWidth() + 2, transform: `translate3d(${-sx}px,0px,0px)`	});
 		} else {
 			clone.remove();
 		};

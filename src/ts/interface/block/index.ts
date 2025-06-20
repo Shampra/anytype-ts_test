@@ -1,5 +1,8 @@
 import { I } from 'Lib';
 
+export interface BlockRef {
+};
+
 export interface PageInfo {
 	id: string;
 	snippet: string;
@@ -196,6 +199,7 @@ export interface Block {
 	isEmbedGithubGist?(): boolean;
 	isEmbedSketchfab?(): boolean;
 	isEmbedBilibili?(): boolean;
+	isEmbedDrawio?():boolean;
 
 	isText?(): boolean;
 	isTextTitle?(): boolean;

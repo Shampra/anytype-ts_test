@@ -12,8 +12,8 @@ export default {
 		],
 
 		param: {
-			element: '#pageFlex.isFull #footer #button-help',
-			classNameWrap: 'fixed',
+			element: '#button-widget-help',
+			classNameWrap: 'fixed fromSidebar',
 			className: 'isWizard',
 			vertical: I.MenuDirection.Top,
 			horizontal: I.MenuDirection.Right,
@@ -26,8 +26,8 @@ export default {
 	emailCollection: () => ({
 		items: [ { noButton: true } ],
 		param: {
-			element: '#pageFlex.isFull #footer #button-help',
-			classNameWrap: 'fixed',
+			element: '#button-widget-help',
+			classNameWrap: 'fixed fromSidebar',
 			className: 'invertedColor',
 			vertical: I.MenuDirection.Top,
 			horizontal: I.MenuDirection.Right,
@@ -49,8 +49,8 @@ export default {
 			},
 		],
 		param: {
-			element: '#pageFlex.isFull #footer #button-help',
-			classNameWrap: 'fixed',
+			element: '#button-widget-help',
+			classNameWrap: 'fixed fromSidebar',
 			className: 'isWizard',
 			vertical: I.MenuDirection.Top,
 			horizontal: I.MenuDirection.Right,
@@ -72,8 +72,8 @@ export default {
 			},
 		],
 		param: {
-			element: '#pageFlex.isFull #footer #button-help',
-			classNameWrap: 'fixed',
+			element: '#button-widget-help',
+			classNameWrap: 'fixed fromSidebar',
 			className: 'isWizard',
 			vertical: I.MenuDirection.Top,
 			horizontal: I.MenuDirection.Right,

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef, MouseEvent } from 'react';
 import $ from 'jquery';
+import raf from 'raf';
 import { Icon, DragHorizontal, DragVertical, Floater } from 'Component';
 import { U } from 'Lib';
 
@@ -33,7 +34,9 @@ const MediaAudio = forwardRef<MediaAudioRefProps, Props>(({
 	const volumeIconRef = useRef(null);
 	const playIconRef = useRef(null);
 	const floaterRef = useRef(null);
-	const resizeObserver = new ResizeObserver(() => resize());
+	const resizeObserver = new ResizeObserver(() => {
+		raf(() => resize());
+	});
 	const [ current, setCurrent ] = useState<PlaylistItem>(null);
 	const { src, name }	= current || {};
 	const ci = [ 'volume' ];
@@ -170,11 +173,15 @@ const MediaAudio = forwardRef<MediaAudioRefProps, Props>(({
 	useEffect(() => {
 		onVolume(1);
 
+		if (nodeRef.current) {
+			resizeObserver.observe(nodeRef.current);
+		};
+
 		return () => {
 			unbind();
 
 			if (nodeRef.current) {
-				resizeObserver.unobserve(nodeRef.current);
+				resizeObserver.disconnect();
 			};
 		};
 	}, []);
@@ -182,10 +189,6 @@ const MediaAudio = forwardRef<MediaAudioRefProps, Props>(({
 	useEffect(() => {
 		resize();
 		rebind();
-
-		if (nodeRef.current) {
-			resizeObserver.observe(nodeRef.current);
-		};
 		setCurrent(playlist[0]);
 	});
 
@@ -209,9 +212,7 @@ const MediaAudio = forwardRef<MediaAudioRefProps, Props>(({
 			<audio ref={audioRef} preload="auto" src={src} />
 
 			<div className="controlsWrapper">
-				<div className="name">
-					<span>{name}</span>
-				</div>
+				<div className="name">{name}</div>
 
 				<div className="controls">
 					<Icon 

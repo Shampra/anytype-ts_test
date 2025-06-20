@@ -134,13 +134,24 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 	};
 
 	getSections () {
-		const type = S.Record.getTypeById(this.props.rootId);
-		const isFile = type ? U.Object.isInFileLayouts(type.recommendedLayout) : false;
+		const { rootId } = this.props;
+		const type = S.Record.getTypeById(rootId);
+		
+		let isFile = false;
+		let isTemplate = false;
+		let canShowTemplates = false;
+
+		if (type) {
+			isFile = U.Object.isInFileLayouts(type.recommendedLayout);
+			isTemplate = U.Object.isTemplateType(rootId);
+			canShowTemplates = !U.Object.getLayoutsWithoutTemplates().includes(type.recommendedLayout) && !isTemplate;
+		};
 
 		return [
 			{ id: 'title', component: 'type/title' },
 			{ id: 'plural', component: 'type/title' },
 			!isFile ? { id: 'layout', component: 'type/layout' } : null,
+			canShowTemplates ? { id: 'template', component: 'type/template' } : null,
 			{ id: 'relation', component: 'type/relation' },
 		].filter(it => it);
 	};
@@ -155,7 +166,13 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 			const relation = S.Record.getRelationByKey(relationKey);
 
-			update[relationKey] = Relation.formatValue(relation, update[relationKey], false);
+			if (relationKey == 'headerRelationsLayout') {
+				update[relationKey] = Number(update[relationKey]);
+			} else {
+				update[relationKey] = Relation.formatValue(relation, update[relationKey], false);
+			};
+
+			// update[relationKey] = Relation.formatValue(relation, update[relationKey], false);
 		};
 
 		this.object = Object.assign(this.object, update);
@@ -169,6 +186,8 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 		this.updateSections();
 		this.disableButton(!U.Common.objectLength(this.update) || (!this.object.name && !this.object.pluralName));
+
+		C.BlockDataviewRelationSet(this.object.id, J.Constant.blockId.dataview, [ 'name', 'description' ].concat(U.Object.getTypeRelationKeys(this.object.id)));
 
 		// analytics
 		let eventId = '';
@@ -265,7 +284,7 @@ const SidebarPageType = observer(class SidebarPageType extends React.Component<I
 
 	close () {
 		this.previewRef?.show(false);
-		sidebar.rightPanelToggle(false, true, this.props.isPopup);
+		sidebar.rightPanelToggle(true, this.props.isPopup);
 	};
 
 	updateSections () {

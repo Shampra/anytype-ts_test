@@ -12,6 +12,7 @@ enum Stage {
 const PageAuthOnboard = observer(forwardRef<{}, I.PageComponent>(() => {
 
 	const { account } = S.Auth;
+	const { redirect } = S.Common;
 	const nodeRef = useRef(null);
 	const frameRef = useRef(null);
 	const phraseRef = useRef(null);
@@ -61,23 +62,29 @@ const PageAuthOnboard = observer(forwardRef<{}, I.PageComponent>(() => {
 				S.Common.getRef('mainAnimation')?.destroy();
 				U.Space.initSpaceState();
 
-				const newRouteParam = { replace: true };
-
-				if (S.Auth.startingId) {
-					U.Object.getById(S.Auth.startingId, {}, object => {
-						if (object) {
-							U.Object.openRoute(object, newRouteParam);
-						} else {
-							U.Space.openDashboard(newRouteParam);
-						};
-					});
-				} else {
-					U.Space.openDashboard(newRouteParam);
-				};
+				const routeParam = { replace: true };
 
 				Storage.set('primitivesOnboarding', true);
 				Storage.setOnboarding('objectDescriptionButton');
 				Storage.setOnboarding('typeResetLayout');
+
+				if (redirect) {
+					U.Router.go(redirect, routeParam);
+					S.Common.redirectSet('');
+					return;
+				};
+
+				if (S.Auth.startingId) {
+					U.Object.getById(S.Auth.startingId, {}, object => {
+						if (object) {
+							U.Object.openRoute(object, routeParam);
+						} else {
+							U.Space.openDashboard(routeParam);
+						};
+					});
+				} else {
+					U.Space.openDashboard(routeParam);
+				};
 
 				Onboarding.start('basics', false);
 			},
@@ -116,20 +123,13 @@ const PageAuthOnboard = observer(forwardRef<{}, I.PageComponent>(() => {
 					});
 				};
 
-				const details = { 
-					name: translate('commonEntrySpace'), 
-					iconOption: U.Common.rand(1, J.Constant.count.icon),
-				};
-
-				C.WorkspaceSetInfo(S.Common.space, details, () => {
-					if (name) {
-						nextRef.current?.setLoading(true);
-						U.Object.setName(S.Block.profile, name, cb);
-					} else {
-						cb();
-						analytics.event('ScreenOnboardingSkipName');
-					};	
-				});
+				if (name) {
+					nextRef.current?.setLoading(true);
+					U.Object.setName(S.Block.profile, name, cb);
+				} else {
+					cb();
+					analytics.event('ScreenOnboardingSkipName');
+				};	
 				break;
 			};
 
@@ -252,9 +252,14 @@ const PageAuthOnboard = observer(forwardRef<{}, I.PageComponent>(() => {
 			);
 
 			buttons = (
-				<div className="animation">
-					<Button ref={nextRef} className={cnb.join(' ')} text={translate('commonContinue')} onClick={onForward} />
-				</div>
+				<>
+					<div className="animation">
+						<Button ref={nextRef} className={cnb.join(' ')} text={translate('commonContinue')} onClick={onForward} />
+					</div>
+					<div className="animation">
+						<Button color="blank" className="c48" text={translate('commonSkip')} onClick={onForward} />
+					</div>
+				</>
 			);
 			break;
 		};
@@ -307,7 +312,9 @@ const PageAuthOnboard = observer(forwardRef<{}, I.PageComponent>(() => {
 			Renderer.send('keytarGet', account.id).then(value => phraseRef.current?.setValue(value));
 		};
 
-		analytics.event('ScreenOnboarding', { step: Stage[stage] });
+		const step = stage == Stage.Name ? 'Soul' : Stage[stage];
+
+		analytics.event('ScreenOnboarding', { step });
 	}, [ stage ]);
 
 	return (

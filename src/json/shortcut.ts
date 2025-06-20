@@ -33,6 +33,12 @@ const getSections = () => {
 						{ id: 'lock', name: translate('popupShortcutMainBasics22'), keys: [ cmdKey, 'alt', 'l' ] },
 						{ id: 'undo', name: translate('popupShortcutMainBasics6'), keys: [ cmdKey, 'z' ] },
 						{ id: 'redo', name: translate('popupShortcutMainBasics7'), keys: [ cmdKey, 'shift', 'z' ] },
+						{ id: 'createWidget', name: translate('menuObjectCreateWidget'), keys: [] },
+						{ id: 'copyPageLink', name: translate('commonCopyLink'), keys: [] },
+						{ id: 'moveToBin', name: translate('popupShortcutMainBasics25'), keys: [] },
+						{ id: 'addFavorite', name: translate('popupShortcutMainBasics26'), keys: [] },
+						{ id: 'tableOfContents', name: translate('sidebarToc'), keys: [] },
+						{ id: 'logout', name: translate('commonLogout'), keys: [] },
 					]
 				},
 
@@ -50,6 +56,7 @@ const getSections = () => {
 				{
 					name: translate('popupShortcutNavigation'), children: [
 						{ id: 'settings', name: translate('popupShortcutNavigationBasics1'), keys: [ cmdKey, 'comma' ] },
+						{ id: 'settingsSpace', name: translate('popupShortcutNavigationBasics12'), keys: [] },
 						{ id: 'navigation', name: translate('popupShortcutNavigationBasics2'), keys: [ cmdKey, 'o' ] },
 						{ id: 'graph', name: translate('popupShortcutNavigationBasics3'), keys: [ cmdKey, 'alt', 'o' ] },
 						{ id: 'search', name: translate('popupShortcutNavigationBasics4'), keys: [ cmdKey, 'k' ] },

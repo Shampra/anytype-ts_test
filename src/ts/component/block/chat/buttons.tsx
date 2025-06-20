@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { observer } from 'mobx-react';
 import { Icon } from 'Component';
-import { Action, I, J, keyboard, Mark, S, translate, U } from 'Lib';
+import { Action, analytics, I, J, keyboard, Mark, S, translate, U } from 'Lib';
 
 interface Props extends I.BlockComponent {
 	blockId: string;
@@ -102,6 +102,7 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 						noUpload: true,
 						value: '',
 						onSelect: (icon) => onChatButtonSelect(type, icon),
+						route: analytics.route.message,
 					}
 				});
 				break;
@@ -250,8 +251,12 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 			Action.openFileDialog({ properties: [ 'multiSelections' ] }, paths => {
 				if (paths.length) {
 					addAttachments(paths.map(path => getObjectFromPath(path)));
+
+					analytics.event('AttachItemChat', { type: 'Upload', count: paths.length });
 				};
 			});
+
+			analytics.event('ClickChatAttach', { type: 'Upload' });
 		};
 
 		let menuId = '';
@@ -263,6 +268,8 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 				return;
 			};
 
+			const analyticsMenuName = U.Common.toUpperCamelCase(menu);
+
 			menuId = 'searchObject';
 			data = {
 				skipIds: attachments.map(it => it.id),
@@ -271,7 +278,9 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 				],
 				onSelect: (item: any) => {
 					onChatButtonSelect(I.ChatButton.Object, item);
-				}
+
+					analytics.event('AttachItemChat', { type: analyticsMenuName, count: 1 });
+				},
 			};
 
 			if (menu == 'object') {
@@ -290,9 +299,11 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 						name: translate('commonUpload'),
 						icon: 'upload',
 						onClick: upload
-					}
+					},
 				});
 			};
+
+			analytics.event('ClickScreenChatAttach', { type: analyticsMenuName });
 		} else {
 			menuId = 'select';
 			data = {
@@ -303,6 +314,8 @@ const ChatButtons = observer(class ChatButtons extends React.Component<Props, St
 					this.onAttachment(option.id);
 				}
 			};
+
+			analytics.event('ScreenChatAttach');
 		};
 
 		S.Menu.closeAll(null, () => {

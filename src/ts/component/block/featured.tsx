@@ -2,8 +2,8 @@ import * as React from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
 import { observable } from 'mobx';
-import { ObjectType, Cell } from 'Component';
-import { I, C, S, U, J, Preview, focus, analytics, Relation, Onboarding, history as historyPopup, keyboard, translate } from 'Lib';
+import { ObjectType, Cell, Block } from 'Component';
+import { I, C, S, U, J, M, Preview, focus, analytics, Relation, Onboarding, history as historyPopup, keyboard, translate } from 'Lib';
 
 interface Props extends I.BlockComponent {
 	size?: number;
@@ -43,11 +43,12 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 	};
 
 	render () {
-		const { rootId, block, size, iconSize, isPopup } = this.props;
+		const { rootId, block, size, iconSize, isPopup, readonly } = this.props;
 		const allowedValue = S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Details ]);
 		const items = this.getItems();
 		const object = this.getObject();
-		const type = S.Detail.get(rootId, object.type, []);
+		const check = U.Data.checkDetails(rootId, rootId, []);
+		const { headerRelationsLayout } = check;
 
 		return (
 			<div 
@@ -57,65 +58,88 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 				onKeyDown={this.onKeyDown} 
 				onKeyUp={this.onKeyUp}
 			>
-				{items.map((relation: any, i: any) => {
-					const id = Relation.cellId(PREFIX, relation.relationKey, object.id);
-					const value = object[relation.relationKey];
-					const canEdit = allowedValue && !relation.isReadonlyValue;
-					const cn = [ 'cell', (canEdit ? 'canEdit' : '') ];
+				{headerRelationsLayout == I.FeaturedRelationLayout.Column ? (
+					<div className="listColumn">
+						{items.map((relation: any) => {
+							const value = object[relation.relationKey];
+							const canEdit = !readonly && allowedValue && !relation.isReadonlyValue;
 
-					if (i == items.length - 1) {
-						cn.push('last');
-					};
+							return (
+								<Block
+									{...this.props}
+									key={relation.id}
+									rootId={rootId}
+									block={new M.Block({ id: relation.id, type: I.BlockType.Relation, content: { key: relation.relationKey } })}
+									readonly={!canEdit}
+									isSelectionDisabled={true}
+									isContextMenuDisabled={true}
+								/>
+							);
+						})}
+					</div>
+				) : (
+					<div className="listInline">
+						{items.map((relation: any, i: any) => {
+							const id = Relation.cellId(PREFIX, relation.relationKey, object.id);
+							const value = object[relation.relationKey];
+							const canEdit = !readonly && allowedValue && !relation.isReadonlyValue;
+							const cn = [ 'cell', (canEdit ? 'canEdit' : '') ];
 
-					if (relation.relationKey == 'type') {
-						return this.renderType();
-					};
+							if (i == items.length - 1) {
+								cn.push('last');
+							};
 
-					if (relation.relationKey == 'setOf') {
-						return this.renderSetOf();
-					};
+							if (relation.relationKey == 'type') {
+								return this.renderType();
+							};
 
-					if (relation.relationKey == 'identity') {
-						return this.renderIdentity();
-					};
+							if (relation.relationKey == 'setOf') {
+								return this.renderSetOf();
+							};
 
-					if ([ 'links', 'backlinks' ].includes(relation.relationKey)) {
-						return this.renderLinks(relation.relationKey, i);
-					};
+							if (relation.relationKey == 'identity') {
+								return this.renderIdentity();
+							};
 
-					return (
-						<span
-							key={i}
-							className={cn.join(' ')}
-							onClick={e => this.onRelation(e, relation.relationKey)}
-						>
-							<Cell
-								ref={ref => this.cellRefs.set(id, ref)}
-								placeholder={relation.name}
-								elementId={id}
-								rootId={rootId}
-								subId={rootId}
-								block={block}
-								relationKey={relation.relationKey}
-								getRecord={() => object}
-								viewType={I.ViewType.Grid}
-								pageContainer={U.Common.getCellContainer(isPopup ? 'popup' : 'page')}
-								size={size}
-								iconSize={iconSize}
-								readonly={!canEdit}
-								isInline={true}
-								idPrefix={PREFIX}
-								elementMapper={this.elementMapper}
-								tooltipParam={{ text: relation.name, typeX: I.MenuDirection.Left }}
-								arrayLimit={relation.format == I.RelationType.Object ? 1 : 2}
-								textLimit={150}
-								onMouseLeave={this.onMouseLeave}
-								withName={true}
-							/>
-							<div className="bullet" />
-						</span>
-					);
-				})}
+							if ([ 'links', 'backlinks' ].includes(relation.relationKey)) {
+								return this.renderLinks(relation.relationKey, i);
+							};
+
+							return (
+								<span
+									key={i}
+									className={cn.join(' ')}
+									onClick={e => this.onRelation(e, relation.relationKey)}
+								>
+									<Cell
+										ref={ref => this.cellRefs.set(id, ref)}
+										placeholder={relation.name}
+										elementId={id}
+										rootId={rootId}
+										subId={rootId}
+										block={block}
+										relationKey={relation.relationKey}
+										getRecord={() => object}
+										viewType={I.ViewType.Grid}
+										pageContainer={U.Common.getCellContainer(isPopup ? 'popup' : 'page')}
+										size={size}
+										iconSize={iconSize}
+										readonly={!canEdit}
+										isInline={true}
+										idPrefix={PREFIX}
+										elementMapper={this.elementMapper}
+										tooltipParam={{ text: relation.name, typeX: I.MenuDirection.Left }}
+										arrayLimit={relation.format == I.RelationType.Object ? 1 : 2}
+										textLimit={150}
+										onMouseLeave={this.onMouseLeave}
+										withName={true}
+									/>
+									<div className="bullet" />
+								</span>
+							);
+						})}
+					</div>
+				)}
 			</div>
 		);
 	};
@@ -167,7 +191,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		);
 
 		let ret = null;
-		if (U.Object.isTemplate(object.type)) {
+		if (U.Object.isTemplateType(object.type)) {
 			ret = (
 				<span className="cell" key="type">
 					<div className="cellContent type disabled">{name}</div>
@@ -833,7 +857,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 	getItems (): any[] {
 		const { rootId } = this.props;
 		const storeId = this.getStoreId();
-		const short = S.Detail.get(rootId, storeId, [ 'type', 'targetObjectType', 'layout', 'featuredRelations' ], true);
+		const short = S.Detail.get(rootId, storeId, [ 'type', 'targetObjectType', 'layout', 'featuredRelations', 'headerRelationsLayout' ], true);
 		const keys = Relation.getArrayValue(short.featuredRelations).filter(it => it != 'description');
 
 		let ret = [];

@@ -16,6 +16,7 @@ import ViewGallery from './dataview/view/gallery';
 import ViewList from './dataview/view/list';
 import ViewCalendar from './dataview/view/calendar';
 import ViewGraph from './dataview/view/graph';
+import ViewTimeline from './dataview/view/timeline';
 
 interface Props extends I.BlockComponent {
 	isInline?: boolean;
@@ -104,7 +105,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		const isCollection = this.isCollection();
 		const cn = [ 'focusable', `c${block.id}` ];
 
-		const { groupRelationKey, pageLimit, defaultTemplateId } = view;
+		const { groupRelationKey, endRelationKey, pageLimit, defaultTemplateId } = view;
 		const className = [ U.Common.toCamelCase(`view-${I.ViewType[view.type]}`) ];
 
 		let ViewComponent: any = null;
@@ -138,6 +139,10 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 			case I.ViewType.Graph:
 				ViewComponent = ViewGraph;
+				break;
+
+			case I.ViewType.Timeline:
+				ViewComponent = ViewTimeline;
 				break;
 		};
 
@@ -368,7 +373,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 		this.viewId = viewId;
 
-		const { rootId, block } = this.props;
+		const { rootId, block, isInline } = this.props;
 		const subId = this.getSubId();
 		const keys = this.getKeys(viewId);
 		const sources = this.getSources();
@@ -388,7 +393,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				this.viewId = '';
 			};
 		} else 
-		if (view.type == I.ViewType.Calendar) {
+		if ([ I.ViewType.Calendar, I.ViewType.Timeline ].includes(view.type)) {
 			if (this.refView && this.refView.load) {
 				this.refView.load();
 			} else {
@@ -402,6 +407,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			};
 
 			Dataview.getData({
+				isInline,
 				rootId, 
 				subId,
 				blockId: block.id, 
@@ -455,6 +461,10 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			if (view.groupRelationKey) {
 				keys.push(view.groupRelationKey);
 			};
+
+			if (view.endRelationKey) {
+				keys.push(view.endRelationKey);
+			};
 		};
 
 		return U.Common.arrayUnique(keys);
@@ -470,7 +480,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 		switch (type) {
 			default: {
-				limit = isInline ? pageLimit : 0;
+				limit = isInline ? pageLimit : 500;
 				break;
 			};
 
@@ -962,6 +972,10 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		e.preventDefault();
 		e.stopPropagation();
 
+		if (e.ctrlKey) {
+			return;
+		};
+
 		subId = subId || this.getSubId();
 
 		const { block } = this.props;
@@ -1044,13 +1058,15 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 					window.setTimeout(() => this.loadData(message.views[0].id, 0, true), 50);
 				};
 
-				if (isNew && this.refControls && this.refControls.refHead) {
-					const ref = this.refControls.refHead;
+				if (isNew) {
+					const ref = this.refControls?.getHeadRef();
 					const l = String(item.name || '').length;
 
-					ref.setValue(item.name);
-					ref.setRange({ from: l, to: l });
-					ref.setEditing(true);
+					if (ref) {
+						ref.setValue(item.name);
+						ref.setRange({ from: l, to: l });
+						ref.setEditing(true);
+					};
 				};
 
 				if (isInline) {
@@ -1230,6 +1246,8 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			};
 
 			case 'source': {
+				cn.push('withHead');
+
 				emptyProps = {
 					title: translate('blockDataviewEmptySourceTitle'),
 					description: translate('blockDataviewEmptySourceDescription'),
@@ -1487,9 +1505,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				obj.toggleClass('isVertical', node.width() <= getWrapperWidth() / 2);
 			};
 
-			if (this.refControls && this.refControls.resize) {
-				this.refControls.resize();
-			};
+			this.refControls?.resize();
 
 			if (this.refView && this.refView.resize) {
 				this.refView.resize();

@@ -8,6 +8,7 @@ import Service from 'dist/lib/pb/protos/service/service_grpc_web_pb';
 import { I, M, S, U, J, analytics, Renderer, Action, Dataview, Mapper, keyboard, Preview, focus } from 'Lib';
 import * as Response from './response';
 import { ClientReadableStream } from 'grpc-web';
+import { unaryInterceptors, streamInterceptors } from './grpc-devtools';
 
 const SORT_IDS = [ 
 	'BlockAdd', 
@@ -39,7 +40,10 @@ class Dispatcher {
 			return;
 		};
 
-		this.service = new Service.ClientCommandsClient(address, null, null);
+		this.service = new Service.ClientCommandsClient(address, null, {
+			unaryInterceptors,
+			streamInterceptors,
+		});
 	};
 
 	startStream () {
@@ -606,7 +610,7 @@ class Dispatcher {
 					let updateData = false;
 
 					if (fields !== null) {
-						const updateKeys = [ 'type', 'groupRelationKey', 'pageLimit' ];
+						const updateKeys = [ 'type', 'groupRelationKey', 'endRelationKey', 'pageLimit' ];
 
 						for (const f of updateKeys) {
 							if (fields[f] != view[f]) {
@@ -670,7 +674,7 @@ class Dispatcher {
 
 									if (idx >= 0) {
 										if (key.id == 'relation') {
-											const updateKeys = [ 'includeTime' ];
+											const updateKeys = [];
 
 											for (const f of updateKeys) {
 												if (list[idx][f] != item[f]) {
@@ -925,11 +929,7 @@ class Dispatcher {
 							const { object } = payload;
 
 							U.Object.openAuto(object);
-							window.focus();
-
-							if (electron.focus) {
-								electron.focus();
-							};
+							Renderer.send('focusWindow');
 
 							analytics.createObject(object.type, object.layout, analytics.route.webclipper, 0);
 							break;
@@ -963,9 +963,9 @@ class Dispatcher {
 				};
 
 				case 'ChatAdd': {
-					const orderId = mapped.orderId;
+					const { orderId, dependencies } = mapped;
 					const message = new M.ChatMessage(mapped.message);
-					const author = U.Space.getParticipant(U.Space.getParticipantId(space, message.creator));
+					const author = S.Detail.mapper(dependencies.find(it => it.identity == message.creator));
 
 					mapped.subIds.forEach(subId => {
 						const list = S.Chat.getList(subId);
@@ -983,6 +983,8 @@ class Dispatcher {
 							const { space } = S.Common;
 							const open = () => {
 								U.Object.openAuto({ id: S.Block.workspace, layout: I.ObjectLayout.Chat });
+
+								analytics.event('OpenChatFromNotification');
 							};
 
 							if (spaceId != space) {
@@ -1170,12 +1172,16 @@ class Dispatcher {
 		};
 
 		const records = S.Record.getRecordIds(sid, '');
-		const newIndex = afterId ? records.indexOf(afterId) + 1 : 0;
 
+		let newIndex = afterId ? records.indexOf(afterId) : 0;
 		let oldIndex = records.indexOf(id);
 
 		if (isAdding && (oldIndex >= 0)) {
 			return;
+		};
+
+		if (newIndex && (newIndex < oldIndex)) {
+			newIndex++;
 		};
 
 		if (oldIndex < 0) {

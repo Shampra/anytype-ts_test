@@ -4,6 +4,8 @@
 	.block.blockDataview {
 		.rowHead, .rowFoot, #rowHeadClone { display: grid; white-space: nowrap; height: 36px; }
 
+		.selectionTarget.isSelectionSelected::after { left: 0px; width: 100%; }
+
 		.rowHead { user-select: none; }
 		.rowHead, .rowFoot { width: calc(100% - 4px); margin-left: 2px; }
 		.rowHead.fixed { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -95,7 +97,7 @@
 			.icon.plus { background-image: url('~img/icon/plus/menu1.svg'); }
 		}
 
-		.viewContent.viewGrid { width: 100%; position: relative; padding: 0px 0px 16px 0px; }
+		.viewContent.viewGrid { width: 100%; position: relative; padding: 0px; }
 		.viewContent.viewGrid {
 			.loadMore { padding: 10px 2px; box-shadow: 0px 1px var(--color-shape-secondary) inset; }
 

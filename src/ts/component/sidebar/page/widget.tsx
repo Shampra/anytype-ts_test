@@ -1,7 +1,7 @@
 import * as React from 'react';
 import raf from 'raf';
 import { observer } from 'mobx-react';
-import { Button, Widget, DropTarget, ShareBanner } from 'Component';
+import { Button, Icon, Widget, DropTarget, ShareBanner } from 'Component';
 import { I, C, M, S, U, J, keyboard, analytics, translate } from 'Lib';
 
 type State = {
@@ -35,6 +35,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		this.onScroll = this.onScroll.bind(this);
 		this.setEditing = this.setEditing.bind(this);
 		this.setPreview = this.setPreview.bind(this);
+		this.onHelp = this.onHelp.bind(this);
 	};
 
 	render (): React.ReactNode {
@@ -43,8 +44,8 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		const { showVault } = S.Common;
 		const cn = [ 'body' ];
 		const space = U.Space.getSpaceview();
-		const canWrite = U.Space.canMyParticipantWrite();
 		const hasShareBanner = U.Space.hasShareBanner();
+		const buttons: I.ButtonComponent[] = [];
 
 		if (isEditing) {
 			cn.push('isEditing');
@@ -55,6 +56,8 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		};
 
 		let content = null;
+		let first = null;
+		let bottom = null;
 
 		if (previewId) {
 			const block = S.Block.getLeaf(widgets, previewId);
@@ -69,6 +72,8 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 						isPreview={true}
 						setPreview={this.setPreview}
 						setEditing={this.setEditing}
+						canEdit={true}
+						canRemove={false}
 					/>
 				);
 			};
@@ -122,25 +127,16 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 				return 0;
 			});
 
-			let first = null;
-			let buttons: I.ButtonComponent[] = [];
-
 			if (blocks.length) {
 				first = blocks[0];
 			};
 
 			if (isEditing) {
 				if (blocks.length <= J.Constant.limit.widgets) {
-					buttons.push({ id: 'widget-list-add', text: translate('commonAdd'), onMouseDown: e => this.onAdd(e, analytics.route.addWidgetEditor) });
+					buttons.push({ id: 'widget-list-add', className: 'grey c28', text: translate('commonAdd'), onMouseDown: e => this.onAdd(e, analytics.route.addWidgetEditor) });
 				};
 
-				buttons.push({ id: 'widget-list-done', text: translate('commonDone'), onMouseDown: this.onEdit });
-			} else 
-			if (canWrite) {
-				buttons = buttons.concat([
-					{ id: 'widget-list-add', className: 'grey c28', text: translate('commonAdd'), onMouseDown: e => this.onAdd(e, analytics.route.addWidgetMain) },
-					{ id: 'widget-list-edit', className: 'grey c28', text: translate('commonEdit'), onMouseDown: this.onEdit }
-				]);
+				buttons.push({ id: 'widget-list-done', className: 'grey c28', text: translate('commonDone'), onMouseDown: this.onEdit });
 			};
 
 			content = (
@@ -165,31 +161,64 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 									onDragStart={this.onDragStart}
 									onDragOver={this.onDragOver}
 									isEditing={isEditing}
+									canEdit={false}
+									canRemove={false}
 								/>
 							</DropTarget>
 						</>
 					) : ''}
 
-					{blocks.map((block, i) => (
-						<Widget 
-							{...this.props}
-							key={`widget-${block.id}`}
-							block={block}
-							isEditing={isEditing}
-							className="isEditable"
-							onDragStart={this.onDragStart}
-							onDragOver={this.onDragOver}
-							setPreview={this.setPreview}
-							setEditing={this.setEditing}
-						/>
-					))}
+					{blocks.map((block, i) => {
+						const { widgets } = S.Block;
+						const childrenIds = S.Block.getChildrenIds(widgets, block.id);
+						const child = childrenIds.length ? S.Block.getLeaf(widgets, childrenIds[0]) : null;
+						const targetId = child ? child.getTargetObjectId() : '';
+						const isChat = targetId == J.Constant.widgetId.chat;
+						const canEdit = !isChat || !space.isChat;
 
-					<div className="buttons">
-						{buttons.map(button => (
-							<Button key={[ button.id, (isEditing ? 'edit' : '') ].join('-')} color="" {...button} />
-						))}
-					</div>
+						return (
+							<Widget
+								{...this.props}
+								key={`widget-${block.id}`}
+								block={block}
+								isEditing={canEdit ? isEditing : false}
+								canEdit={canEdit}
+								canRemove={canEdit}
+								onDragStart={this.onDragStart}
+								onDragOver={this.onDragOver}
+								setPreview={this.setPreview}
+								setEditing={this.setEditing}
+							/>
+						);
+					})}
 				</>
+			);
+
+			bottom = (
+				<div className="bottom">
+					<div className="grad" />
+
+					<div className="side left">
+						<Icon className="settings withBackground" tooltipParam={{ text: translate('sidebarEdit') }} onClick={this.onEdit} />
+					</div>
+
+					<div className="side center">
+						{!isEditing ? (
+							<Button id="widget-list-add" text={translate('menuWidgetAddWidget')} color="simple" onClick={this.onAdd} />
+						) : (
+							<Button color="simple" text={translate('commonDone')} onClick={this.onEdit} />
+						)}
+					</div>
+
+					<div className="side right">
+						<Icon 
+							id="button-widget-help" 
+							className="help withBackground" 
+							tooltipParam={{ text: translate('commonHelp') }} 
+							onClick={this.onHelp} 
+						/>
+					</div>
+				</div>
 			);
 		};
 
@@ -211,12 +240,24 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 				>
 					{content}
 				</div>
+
+				{bottom}
 			</div>
 		);
 	};
 
 	componentDidUpdate (): void {
 		this.onScroll();
+	};
+
+	onHelp () {
+		S.Menu.open('help', {
+			element: '#button-widget-help',
+			className: 'fixed',
+			classNameWrap: 'fromSidebar',
+			vertical: I.MenuDirection.Top,
+			offsetY: -78,
+		});
 	};
 
 	onEdit (e: any): void {
@@ -231,11 +272,14 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		analytics.event('ClickAddWidget', { route });
 
 		const { widgets } = S.Block;
+		const space = U.Space.getSpaceview();
 		const blocks = S.Block.getChildren(widgets, widgets, (block: I.Block) => block.isWidget());
 		const targets = [];
 		const node = $(this.node);
-		const body = node.find('#body');
-		const position = body.outerHeight() + 350 > node.outerHeight() ? I.MenuDirection.Top : I.MenuDirection.Bottom;
+		const nh = node.outerHeight();
+		const button = node.find('#widget-list-add');
+		const { top } = button.offset();
+		const position = top + 350 > nh ? I.MenuDirection.Top : I.MenuDirection.Bottom;
 
 		blocks.forEach(block => {
 			const children = S.Block.getChildren(widgets, block.id);
@@ -278,7 +322,8 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 			element: '#widget-list-add',
 			className: 'fixed',
 			classNameWrap: 'fromSidebar',
-			offsetY: -4,
+			offsetY: position == I.MenuDirection.Top ? -4 : 4,
+			horizontal: I.MenuDirection.Center,
 			vertical: position,
 			subIds: J.Menu.widgetAdd,
 			data: {
@@ -291,14 +336,21 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 				dataChange: (context: any, items: any[]) => {
 					const skipLayouts = U.Object.getSystemLayouts().concat(I.ObjectLayout.Type);
 					const reg = new RegExp(U.Common.regexEscape(context.filter), 'gi');
-					const fixed: any[] = U.Menu.getSystemWidgets().filter(it => !targets.includes(it.id) && it.name.match(reg));
 					const types = S.Record.checkHiddenObjects(S.Record.getTypes()).
-						filter(it => !targets.includes(it.id) && !skipLayouts.includes(it.recommendedLayout) && !U.Object.isTemplate(it.id) && (it.name.match(reg) || it.pluralName.match(reg))).
+						filter(it => !targets.includes(it.id) && !skipLayouts.includes(it.recommendedLayout) && !U.Object.isTemplateType(it.id) && (it.name.match(reg) || it.pluralName.match(reg))).
 						map(it => ({ ...it, caption: '' }));
 					const lists = [];
 
-					if (fixed.length) {
-						lists.push([ { name: translate('commonSystem'), isSection: true } ].concat(fixed));
+					let system: any[] = U.Menu.getSystemWidgets().filter(it => !targets.includes(it.id) && it.name.match(reg));
+
+					if (system.length) {
+						system = system.filter(it => it.id != J.Constant.widgetId.allObject);
+
+						if (!space.chatId && !U.Object.isAllowedChat()) {
+							system = system.filter(it => it.id != J.Constant.widgetId.chat);
+						};
+
+						lists.push([ { name: translate('commonSystem'), isSection: true } ].concat(system));
 					};
 
 					if (types.length) {
@@ -467,6 +519,8 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 	};
 
 	setEditing (isEditing: boolean) {
+		console.trace();
+
 		this.setState({ isEditing });
 
 		if (!isEditing) {
@@ -487,7 +541,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 
 		window.setTimeout(() => {
 			win.on('mousedown.sidebar', e => {
-				if (!$(e.target).parents('.widget').length) {
+				if (!$(e.target).parents('.widget, .bottom').length) {
 					close(e);
 				};
 			});

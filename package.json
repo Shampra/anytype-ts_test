@@ -1,6 +1,6 @@
 {
 	"name": "anytype",
-	"version": "0.46.23-alpha",
+	"version": "0.47.5-alpha",
 	"description": "Anytype",
 	"main": "electron.js",
 	"scripts": {
@@ -54,6 +54,7 @@
 		"@rspack/cli": "^1.1.0",
 		"@rspack/core": "^1.1.0",
 		"@rspack/plugin-react-refresh": "^1.0.0",
+		"@tomjs/electron-devtools-installer": "^3.0.1",
 		"@types/history": "^4.7.8",
 		"@types/jquery": "^3.5.14",
 		"@types/katex": "^0.14.0",
@@ -127,7 +128,7 @@
 		"install": "^0.13.0",
 		"jquery": "^3.5.1",
 		"js-htmlencode": "^0.3.0",
-		"katex": "^0.16.11",
+		"katex": "^0.16.22",
 		"keytar": "^7.7.0",
 		"lazy-val": "^1.0.4",
 		"lodash": "^4.17.20",
@@ -308,6 +309,10 @@
 				"to": "node_modules/@electron"
 			},
 			{
+				"from": "node_modules/@tomjs",
+				"to": "node_modules/@tomjs"
+			},
+			{
 				"from": "node_modules/ajv",
 				"to": "node_modules/ajv"
 			},
@@ -440,6 +445,10 @@
 				"to": "node_modules/if-async"
 			},
 			{
+				"from": "node_modules/immediate",
+				"to": "node_modules/immediate"
+			},
+			{
 				"from": "node_modules/imurmurhash",
 				"to": "node_modules/imurmurhash"
 			},
@@ -476,12 +485,20 @@
 				"to": "node_modules/jsonfile"
 			},
 			{
+				"from": "node_modules/jszip",
+				"to": "node_modules/jszip"
+			},
+			{
 				"from": "node_modules/keytar",
 				"to": "node_modules/keytar"
 			},
 			{
 				"from": "node_modules/lazy-val",
 				"to": "node_modules/lazy-val"
+			},
+			{
+				"from": "node_modules/lie",
+				"to": "node_modules/lie"
 			},
 			{
 				"from": "node_modules/locate-path",
@@ -552,6 +569,10 @@
 				"to": "node_modules/p-try"
 			},
 			{
+				"from": "node_modules/pako",
+				"to": "node_modules/pako"
+			},
+			{
 				"from": "node_modules/path-exists",
 				"to": "node_modules/path-exists"
 			},
@@ -562,6 +583,10 @@
 			{
 				"from": "node_modules/pkg-up",
 				"to": "node_modules/pkg-up"
+			},
+			{
+				"from": "node_modules/process-nextick-args",
+				"to": "node_modules/process-nextick-args"
 			},
 			{
 				"from": "node_modules/pupa",
@@ -580,6 +605,10 @@
 				"to": "node_modules/rimraf"
 			},
 			{
+				"from": "node_modules/safe-buffer",
+				"to": "node_modules/safe-buffer"
+			},
+			{
 				"from": "node_modules/sanitize-filename",
 				"to": "node_modules/sanitize-filename"
 			},
@@ -590,6 +619,10 @@
 			{
 				"from": "node_modules/semver",
 				"to": "node_modules/semver"
+			},
+			{
+				"from": "node_modules/setimmediate",
+				"to": "node_modules/setimmediate"
 			},
 			{
 				"from": "node_modules/signal-exit",
@@ -634,6 +667,10 @@
 			{
 				"from": "node_modules/unused-filename",
 				"to": "node_modules/unused-filename"
+			},
+			{
+				"from": "node_modules/util-deprecate",
+				"to": "node_modules/util-deprecate"
 			},
 			{
 				"from": "node_modules/wrappy",

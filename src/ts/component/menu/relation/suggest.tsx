@@ -76,7 +76,7 @@ const MenuRelationSuggest = observer(class MenuRelationSuggest extends React.Com
 						style={param.style}
 						onMouseEnter={e => this.onMouseEnter(e, item)} 
 						onClick={e => this.onClick(e, item)}
-						withMore={item.isInstalled}
+						withMore={true}
 						onMore={e => this.onEdit(e, item)}
 					/>
 				);
@@ -209,6 +209,7 @@ const MenuRelationSuggest = observer(class MenuRelationSuggest extends React.Com
 
 		const { param } = this.props;
 		const { data } = param;
+		const types = data.types || [];
 		const filter = String(data.filter || '');
 		const filters: any[] = [
 			{ relationKey: 'resolvedLayout', condition: I.FilterCondition.In, value: I.ObjectLayout.Relation },
@@ -218,6 +219,10 @@ const MenuRelationSuggest = observer(class MenuRelationSuggest extends React.Com
 			{ relationKey: 'lastUsedDate', type: I.SortType.Desc },
 			{ relationKey: 'name', type: I.SortType.Asc },
 		];
+
+		if (types.length) {
+			filters.push({ relationKey: 'relationFormat', condition: I.FilterCondition.In, value: types });
+		};
 
 		if (clear) {
 			this.setState({ isLoading: true });
@@ -267,13 +272,20 @@ const MenuRelationSuggest = observer(class MenuRelationSuggest extends React.Com
 		const reg = new RegExp(U.Common.regexEscape(filter), 'gi');
 		const systemKeys = Relation.systemKeys();
 		const items = U.Common.objectCopy(this.items || []).map(it => ({ ...it, object: it }));
-		const library = items.filter(it => it.isInstalled && !systemKeys.includes(it.relationKey));
-		const system = items.filter(it => it.isInstalled && systemKeys.includes(it.relationKey));
-		const types = U.Menu.getRelationTypes().filter(it => it.name.match(reg)).map(it => ({ ...it, isType: true }));
+		const library = items.filter(it => !systemKeys.includes(it.relationKey));
+		const system = items.filter(it => systemKeys.includes(it.relationKey));
+		const types = data.types || [];
+		const typesList = U.Menu.getRelationTypes().filter(it => {
+			if (types.length && !types.includes(Number(it.id))) {
+				return false;
+			};
+
+			return it.name.match(reg);
+		}).map(it => ({ ...it, isType: true }));
 		const canWrite = U.Space.canMyParticipantWrite();
 
 		let sections: any[] = [
-			canWrite && !skipCreate ? { id: 'create', name: translate('menuRelationSuggestCreateNew'), children: types } : null,
+			canWrite && !skipCreate ? { id: 'create', name: translate('menuRelationSuggestCreateNew'), children: typesList } : null,
 			{ id: 'library', name: translate('commonMyRelations'), children: library },
 			{ id: 'system', name: translate('commonSystemRelations'), children: system },
 		];
@@ -343,7 +355,7 @@ const MenuRelationSuggest = observer(class MenuRelationSuggest extends React.Com
 
 		const { id, close, param, getId, getSize } = this.props;
 		const { data, className, classNameWrap } = param;
-		const { rootId, blockId, menuIdEdit, addCommand, ref, noInstall, filter } = data;
+		const { rootId, blockId, menuIdEdit, addCommand, ref, filter } = data;
 		const object = S.Detail.get(rootId, rootId, [ 'type' ], true);
 		const onAdd = (item: any) => {
 			close();
@@ -376,15 +388,9 @@ const MenuRelationSuggest = observer(class MenuRelationSuggest extends React.Com
 				}
 			});
 		} else {
-			if (item.isInstalled || noInstall) {
-				onAdd(item);
+			onAdd(item);
 
-				if (!noInstall) {
-					analytics.event('AddExistingRelation', { format: item.format, type: ref, objectType: object.type, relationKey: item.relationKey });
-				};
-			} else {
-				Action.install(item, true, message => onAdd(message.details));
-			};
+			analytics.event('AddExistingRelation', { format: item.format, type: ref, objectType: object.type, relationKey: item.relationKey });
 		};
 	};
 
