@@ -1573,7 +1573,7 @@ class UtilCommon {
 		const reg = /(^|[^\d<\$]+)?\$((?:[^$<]|\.)*?)\$([^\d>\$]+|$)/gi;
 		const tag = Mark.getTag(I.MarkType.Latex);
 		const code = Mark.getTag(I.MarkType.Code);
-		const regCode = new RegExp(`^${code}|${code}$`, 'i');
+		const regCode = new RegExp(`^${code}>|</${code}$`, 'i');
 		const match = html.matchAll(reg);
 		const render = (s: string) => {
 			s = this.fromHtmlSpecialChars(s);
@@ -1606,6 +1606,12 @@ class UtilCommon {
 
 			// Skip inline code marks
 			if (regCode.test(m1) || regCode.test(m3)) {
+				console.log('RETURN 1');
+				return;
+			};
+
+			// Skip first or last space
+			if (/^\s/.test(m2) || /\s$/.test(m2)) {
 				return;
 			};
 
@@ -1772,14 +1778,20 @@ class UtilCommon {
 	/**
 	 * Scrolls to header in Table of contents
 	 */
-	scrollToHeader (id: string, isPopup: boolean) {
-		const node = $(`.focusable.c${id}`);
+	scrollToHeader (item: any, isPopup: boolean) {
+		const node = $(`.focusable.c${item.id}`);
 
 		if (!node.length) {
 			return;
 		};
 
 		const container = this.getScrollContainer(isPopup);
+
+		if (item.block && item.block.isTextTitle()) {
+			container.scrollTop(0);
+			return;
+		};
+
 		const no = node.offset().top;
 		const st = container.scrollTop();
 		const y = Math.max(J.Size.header + 20, (isPopup ? (no - container.offset().top + st) : no) - J.Size.header - 20);

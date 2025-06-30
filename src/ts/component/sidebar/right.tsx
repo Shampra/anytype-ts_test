@@ -12,6 +12,7 @@ interface Props {
 
 interface SidebarRightRefProps {
 	setState: (state: State) => void;
+	getState: () => State;
 };
 
 interface State {
@@ -20,6 +21,7 @@ interface State {
 	details: any;
 	readonly: boolean;
 	noPreview: boolean;
+	blockId: string;
 	previous: State;
 };
 
@@ -28,7 +30,6 @@ const Components = {
 	'object/relation':			 PageObjectRelation,
 	'object/tableOfContents':	 PageObjectTableOfContents,
 };
-
 
 const SidebarRight = observer(forwardRef<SidebarRightRefProps, Props>((props, ref) => {
 	
@@ -42,6 +43,7 @@ const SidebarRight = observer(forwardRef<SidebarRightRefProps, Props>((props, re
 		readonly: false,
 		noPreview: false,
 		previous: null,
+		blockId: '',
 	});
 
 	const { page = '' } = state;
@@ -59,6 +61,9 @@ const SidebarRight = observer(forwardRef<SidebarRightRefProps, Props>((props, re
 	});
 
 	useImperativeHandle(ref, () => ({
+		getState: () => {
+			return U.Common.objectCopy(state);
+		},
 		setState: (newState: State) => {
 			if (newState.page !== state.page) {
 				delete(state.previous);

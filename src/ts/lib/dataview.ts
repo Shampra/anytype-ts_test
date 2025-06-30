@@ -1,4 +1,4 @@
-import arrayMove from 'array-move';
+import { arrayMove } from '@dnd-kit/sortable';
 import { I, M, C, S, U, J, Relation, translate } from 'Lib';
 
 class Dataview {
@@ -168,6 +168,10 @@ class Dataview {
 
 		if (viewChange) {
 			meta.viewId = newViewId;
+		};
+
+		if (!sorts.length) {
+			sorts.push({ relationKey: 'createdDate', type: I.SortType.Desc, includeTime: true });
 		};
 
 		if (!isInline && (viewChange || clear)) {

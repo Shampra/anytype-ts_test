@@ -31,6 +31,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 	winScrollTop = 0;
 	containerScrollTop = 0;
 	uiHidden = false;
+	tocBlockId = '';
 	width = 0;
 	refHeader: any = null;
 	refControls: any = null;
@@ -75,7 +76,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 	};
 
 	render () {
-		const { rootId } = this.props;
+		const { rootId, isPopup } = this.props;
 		const { isLoading, isDeleted } = this.state;
 		const root = S.Block.getLeaf(rootId, rootId);
 
@@ -84,7 +85,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		};
 
 		if (isLoading) {
-			return <Loader id="loader" />;
+			return <Loader id="loader" fitToContainer={true} isPopup={isPopup} />;
 		};
 
 		if (!root) {
@@ -415,7 +416,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		this.onScroll();
 
 		win.on(`resize.${ns}`, () => this.resizePage());
-		container.on(`scroll.${ns}`, e => this.onScroll());
+		container.on(`scroll.${ns}`, () => this.onScroll());
 
 		Renderer.on(`commandEditor`, (e: any, cmd: string, arg: any) => this.onCommand(cmd, arg));
 	};
@@ -977,9 +978,11 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 
 		if (!this.menuCheck()) {
 			// Expand selection
-			keyboard.shortcut('shift+arrowup, shift+arrowdown', e, (pressed: string) => {
-				this.onShiftArrowBlock(e, range, length, pressed);
-			});
+			if (!isInsideTable) {
+				keyboard.shortcut('shift+arrowup, shift+arrowdown', e, (pressed: string) => {
+					this.onShiftArrowBlock(e, range, length, pressed);
+				});
+			};
 
 			keyboard.shortcut('alt+arrowdown, alt+arrowup', e, (pressed: string) => {
 				if (block.isTextToggle()) {
@@ -1799,8 +1802,10 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		const win = $(window);
 		const container = U.Common.getScrollContainer(isPopup);
 		const top = container.scrollTop();
-		const headers = S.Block.getBlocks(rootId, it => it.isTextHeader());
-		const ch = container.height();
+		const headers = S.Block.getBlocks(rootId, it => it.isTextTitle() || it.isTextHeader());
+		const length = headers.length;
+		const co = isPopup ? container.offset().top : 0;
+		const ch = container.height() - J.Size.header;
 
 		this.containerScrollTop = top;
 		this.winScrollTop = win.scrollTop();
@@ -1810,24 +1815,27 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			Storage.setScroll('editor', rootId, top, isPopup);
 		}, 50);
 
-		let blockId = '';
+		if (length) {
+			for (let i = 0; i < length; ++i) {
+				const block = headers[i];
+				const el = $(`#block-${block.id}`);
 
-		for (let i = 0; i < headers.length; ++i) {
-			const block = headers[i];
-			const el = $(`#block-${block.id}`);
-			if (!el.length) {
-				continue;
-			};
+				if (!el.length) {
+					continue;
+				};
 
-			const offset = el.offset().top + el.outerHeight();
+				const t = el.offset().top - co;
+				const h = el.outerHeight();
+				const check = isPopup ? 0 : top;
 
-			if ((offset >= top) && (offset <= top + ch)) {
-				blockId = block.id;
-				break;
+				if ((t >= check) && (t + h <= check + ch)) {
+					this.tocBlockId = block.id;
+					break;
+				};
 			};
 		};
 
-		this.refToc?.setBlock(blockId);
+		this.refToc?.setBlock(this.tocBlockId);
 		Preview.previewHide(false);
 	};
 	
@@ -2469,7 +2477,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		} else {
 			const size = mw * 0.6;
 
-			mw -= 96;
+			mw -= 128;
 			w = (mw - size) * w;
 			width = Math.max(size, Math.min(mw, size + w));
 		};
