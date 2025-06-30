@@ -145,7 +145,7 @@ class UtilEmbed {
 	 * @returns {string} The HTML iframe or SVG string.
 	 */
 	getDrawioHtml (content: string): string {
-		return content.match(/^<svg/) ? content : `<iframe src="${content}" ${IFRAME_PARAM}></iframe>`;
+		return content.match(/^<svg/) ? content : `<iframe src="${content}" ${IFRAME_PARAM} allow="fullscreen;"></iframe>`;
 	};
 
 	/**
@@ -317,8 +317,6 @@ class UtilEmbed {
 
 
 					if (allowedHosts.includes(u.hostname)) {
-						// Edit mode cannot be opened at this time
-						u.searchParams.delete('edit');
 						url = u.toString();
 					};
 				} catch (e) { /**/ };
