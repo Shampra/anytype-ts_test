@@ -418,7 +418,8 @@ class UtilEmbed {
 		return [ 
 			I.EmbedProcessor.Youtube, 
 			I.EmbedProcessor.Vimeo,
-			I.EmbedProcessor.Bilibili
+			I.EmbedProcessor.Bilibili,
+			I.EmbedProcessor.Drawio
 		].includes(p);
 	};
 
@@ -469,7 +470,6 @@ class UtilEmbed {
 			I.EmbedProcessor.Kroki,
 			I.EmbedProcessor.Chart,
 			I.EmbedProcessor.Image,
-			I.EmbedProcessor.Drawio,
 		].includes(p);
 	};
 
