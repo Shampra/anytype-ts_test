@@ -191,6 +191,7 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 		this.getId = this.getId.bind(this);
 		this.getSize = this.getSize.bind(this);
 		this.getPosition = this.getPosition.bind(this);
+		this.getMaxHeight = this.getMaxHeight.bind(this);
 		this.onMouseLeave = this.onMouseLeave.bind(this);
 		this.onDimmerClick = this.onDimmerClick.bind(this);
 	};
@@ -296,6 +297,7 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 							getId={this.getId} 
 							getSize={this.getSize}
 							getPosition={this.getPosition}
+							getMaxHeight={this.getMaxHeight}
 							position={this.position} 
 							close={this.close}
 							/>
@@ -475,7 +477,7 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 
 	position () {
 		const { id, param } = this.props;
-		const { element, recalcRect, type, vertical, horizontal, fixedX, fixedY, isSub, noFlipX, noFlipY, withArrow, stickToElementEdge, data } = param;
+		const { element, recalcRect, type, vertical, horizontal, fixedX, fixedY, isSub, noFlipX, noFlipY, withArrow, stickToElementEdge } = param;
 
 		if (this.ref && this.ref.beforePosition) {
 			this.ref.beforePosition();
@@ -631,13 +633,14 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 				if (type == I.MenuType.Vertical) {
 					h = height;
 					top = y;
-					w = Math.abs(x - coords.x) - offset;
-					left = coords.x + offset;
 
-					if (flipX) {
-						w -= width;
-						left -= w + offset * 2;
+					if (flipX || I.MenuDirection.Right) {
+						left = x + width;
+						w = Math.abs(x + width - coords.x) - offset;
 						transform = 'scaleX(-1)';
+					} else {
+						left = coords.x + offset;
+						w = Math.abs(x - coords.x) - offset;
 					};
 
 					clipPath = `polygon(0px ${oy - y}px, 0px ${oy - y + eh}px, 100% 100%, 100% 0%)`;
@@ -659,6 +662,7 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 					clipPath,
 					transform,
 					position: (isFixed ? 'fixed' : 'absolute'),
+					zIndex: 100000,
 				});
 
 				window.clearTimeout(this.timeoutPoly);
@@ -1119,6 +1123,10 @@ const Menu = observer(class Menu extends React.Component<I.Menu, State> {
 		};
 
 		return dir;
+	};
+
+	getMaxHeight (isPopup: boolean): number {
+		return U.Common.getScrollContainer(isPopup).height() - this.getBorderTop() - this.getBorderBottom();
 	};
 
 });
