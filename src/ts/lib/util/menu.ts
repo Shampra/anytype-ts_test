@@ -659,7 +659,7 @@ class UtilMenu {
 			data: {
 				options: [
 					{ id: I.HomePredefinedId.Graph, name: translate('commonGraph') },
-					(U.Object.isAllowedChat() ? { id: I.HomePredefinedId.Chat, name: translate('commonChat') } : null),
+					(U.Object.isAllowedChat(true) ? { id: I.HomePredefinedId.Chat, name: translate('commonChat') } : null),
 					{ id: I.HomePredefinedId.Last, name: translate('spaceLast') },
 					{ id: I.HomePredefinedId.Existing, name: translate('spaceExisting'), arrow: true },
 				].filter(it => it),
@@ -794,7 +794,7 @@ class UtilMenu {
 				options.push({ id: 'revoke', name: translate('popupSettingsSpaceShareRevokeInvite') });
 			};
 
-			if (space.notificationMode == I.NotificationMode.Nothing) {
+			if ([ I.NotificationMode.Nothing, I.NotificationMode.Mentions ].includes(space.notificationMode)) {
 				options.push({ id: 'unmute', name: translate('commonUnmute') });
 			} else {
 				options.push({ id: 'mute', name: translate('commonMute') });
@@ -856,7 +856,7 @@ class UtilMenu {
 
 								case 'mute':
 								case 'unmute': {
-									const mode = element.id == 'mute' ? I.NotificationMode.Nothing : I.NotificationMode.All;
+									const mode = element.id == 'mute' ? I.NotificationMode.Mentions : I.NotificationMode.All;
 
 									C.PushNotificationSetSpaceMode(targetSpaceId, mode);
 									analytics.event('ChangeMessageNotificationState', { type: mode, route: analytics.route.vault });
@@ -926,15 +926,26 @@ class UtilMenu {
 		};
 
 		const ids = Storage.get('spaceOrder') || [];
-		const items = U.Common.objectCopy(U.Space.getList());
-
-		items.push({ id: 'gallery', name: translate('commonGallery'), isButton: true });
+		const items = U.Common.objectCopy(U.Space.getList()).
+			concat({ id: 'gallery', name: translate('commonGallery'), isButton: true }).
+			map(it => {
+				it.counter = 0;
+				if (!it.isButton) {
+					const counters = S.Chat.getSpaceCounters(it.targetSpaceId);
+					it.counter = counters.mentionCounter || counters.messageCounter;
+				};
+				return it;
+			});
 
 		if (ids && (ids.length > 0)) {
 			items.sort((c1, c2) => {
 				const i1 = ids.indexOf(c1.id);
 				const i2 = ids.indexOf(c2.id);
 
+				if (c1.counter && !c2.counter) return -1;
+				if (!c1.counter && c2.counter) return 1;
+				if (c1.lastMessageDate > c2.lastMessageDate) return -1;
+				if (c1.lastMessageDate < c2.lastMessageDate) return 1;
 				if (i1 > i2) return 1;
 				if (i1 < i2) return -1;
 				return 0;
@@ -945,9 +956,11 @@ class UtilMenu {
 	};
 
 	getSystemWidgets () {
+		const space = U.Space.getSpaceview();
+
 		return [
 			{ id: J.Constant.widgetId.favorite, name: translate('widgetFavorite'), icon: 'widget-pin' },
-			{ id: J.Constant.widgetId.chat, name: translate('commonMainChat'), icon: 'widget-chat' },
+			{ id: J.Constant.widgetId.chat, name: translate('commonMainChat'), icon: `widget-chat${Number(!space?.isMuted)}` },
 			{ id: J.Constant.widgetId.allObject, name: translate('commonAllContent'), icon: 'widget-all' },
 			{ id: J.Constant.widgetId.recentEdit, name: translate('widgetRecent'), icon: 'widget-pencil' },
 			{ id: J.Constant.widgetId.recentOpen, name: translate('widgetRecentOpen'), icon: 'widget-eye', caption: translate('menuWidgetRecentOpenCaption') },

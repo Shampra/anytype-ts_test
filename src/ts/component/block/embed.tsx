@@ -616,6 +616,7 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 						ADD_ATTR: [
 							'frameborder', 'title', 'allow', 'allowfullscreen', 'loading', 'referrerpolicy', 'src',
 						],
+						ALLOWED_URI_REGEXP: /^(?:(?:ftp|https?|mailto|tel|callto|sms|cid|xmpp|xxx|anytype):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
 					};
 
 					const data: any = { 
@@ -666,7 +667,7 @@ const BlockEmbed = observer(class BlockEmbed extends React.Component<I.BlockComp
 					};
 
 					if (block.isEmbedDrawio()) {
-						sanitizeParam.ADD_TAGS.push('svg', 'foreignObject', 'switch');
+						sanitizeParam.ADD_TAGS.push('svg', 'foreignObject', 'switch', 'g', 'text');
 
 						allowScript = !!text.match(/https:\/\/(?:viewer|embed|app)\.diagrams\.net\/\?[^"\s>]*/);
 					};

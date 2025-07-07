@@ -141,7 +141,7 @@
 		.bubbleInner {
 			.bubble { flex-direction: column-reverse; }
 			.bubble {
-				.textWrapper { padding: 0px 12px 8px; }
+				.textWrapper { padding: 0px 12px 8px; max-width: 532px; }
 			}
 		}
 	}
@@ -171,17 +171,10 @@
 		.author { display: flex; }
 	}
 
-	&.isFirst, &.withText {
-		.attachments { padding: 8px 4px 4px 4px;  }
-		.attachments.withLayout { padding: 4px 4px 8px 4px; }
-	}
-
 	&:not(.withText) {
 		.bubbleInner {
-			.bubble { padding: 4px; }
 			.bubble {
 				.textWrapper { display: none; }
-				.attachments { padding: 0px;}
 			}
 		}
 	}

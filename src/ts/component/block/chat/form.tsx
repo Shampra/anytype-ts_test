@@ -44,6 +44,7 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 	marks: I.Mark[] = [];
 	range: I.TextRange = { from: 0, to: 0 };
 	timeoutFilter = 0;
+	timeoutDrag = 0;
 	editingId: string = '';
 	speedLimit = { last: 0, counter: 0 };
 	state = {
@@ -100,7 +101,7 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 
 		if (this.editingId) {
 			title = translate('blockChatEditing');
-			onClear = this.onEditClear;
+			onClear = () => this.onEditClear();
 		} else
 		if (replyingId) {
 			const message = S.Chat.getMessage(subId, replyingId);
@@ -231,13 +232,24 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 					ref={ref => this.node = ref}
 					id="formWrapper" 
 					className="formWrapper"
+					onDragOver={this.onDragOver}
+					onDragLeave={this.onDragLeave}
 				>
+					<div className="dragOverlay">
+						<div className="inner">
+							<Icon />
+							<Label text={translate('commonDropFiles')} />
+						</div>
+					</div>
+
 					<div className="navigation">
 						{mentionCounter ? <Button type={I.ChatReadType.Mention} icon="mention" className="active" cnt={mentionCounter} /> : ''}
 						<Button type={I.ChatReadType.Message} icon="arrow" className={messageCounter ? 'active' : ''} cnt={mc} />
 					</div>
 
 					{form}
+
+					<div className="bottom" />
 				</div>
 			</>
 		);
@@ -253,7 +265,7 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 		if (!readonly && storage) {
 			const text = String(storage.text || '');
 			const marks = storage.marks || [];
-			const attachments = storage.attachments || [];
+			const attachments = (storage.attachments || []).filter(it => !it.isTmp);
 			const length = text.length;
 
 			this.marks = marks;
@@ -569,6 +581,7 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 		e.preventDefault();
 		e.stopPropagation();
 
+		window.clearTimeout(this.timeoutDrag);
 		$(this.node).addClass('isDraggingOver');
 	};
 	
@@ -576,12 +589,17 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 		e.preventDefault();
 		e.stopPropagation();
 
-		$(this.node).removeClass('isDraggingOver');
+		window.clearTimeout(this.timeoutDrag);
+		this.timeoutDrag = window.setTimeout(() => {
+			if (this._isMounted) {
+				$(this.node).removeClass('isDraggingOver');
+			};
+		}, 100);
 	};
 	
 	onDrop (e: any) {
 		if (!this.canDrop(e)) {
-			$(this.node).removeClass('isDraggingOver');
+			this.onDragLeave(e);
 			return;
 		};
 
@@ -735,10 +753,17 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 		};
 		
 		const callBack = () => {
+			// Marks should be adjusted to remove leading new lines
+
+			const parsed = this.getMarksFromHtml();
+			const text = this.trim(parsed.text);
+			const match = parsed.text.match(/^\r?\n+/);
+			const diff = match ? match[0].length : 0;
+			const marks = Mark.checkRanges(text, Mark.adjust(parsed.marks, 0, -diff));
+
 			if (this.editingId) {
 				const message = S.Chat.getMessage(subId, this.editingId);
 				if (message) {
-					const { marks, text } = this.getMarksFromHtml();
 					const update = U.Common.objectCopy(message);
 
 					update.attachments = attachments;
@@ -751,13 +776,6 @@ const ChatForm = observer(class ChatForm extends React.Component<Props, State> {
 					});
 				};
 			} else {
-				// Marks should be adjusted to remove leading new lines
-
-				const parsed = this.getMarksFromHtml();
-				const text = this.trim(parsed.text);
-				const match = parsed.text.match(/^\r?\n+/);
-				const diff = match ? match[0].length : 0;
-				const marks = Mark.checkRanges(text, Mark.adjust(parsed.marks, 0, -diff));
 				const message = {
 					replyToMessageId: replyingId,
 					content: {

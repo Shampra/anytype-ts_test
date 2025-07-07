@@ -342,7 +342,7 @@ class Action {
 			return;
 		};
 		
-		const url = isImage ? S.Common.imageUrl(id, 1000000) : S.Common.fileUrl(id);
+		const url = isImage ? S.Common.imageUrl(id, 0) : S.Common.fileUrl(id);
 
 		Renderer.send('download', url, { saveAs: true });
 		analytics.event('DownloadMedia', { route });
@@ -1085,6 +1085,13 @@ class Action {
 
 	checkDiskSpace (callBack?: () => void) {
 		Renderer.send('checkDiskSpace').then(diskSpace => {
+			if (!diskSpace) {
+				if (callBack) {
+					callBack();
+				};
+				return;
+			};
+
 			const { free } = diskSpace;
 
 			if (free <= 1024 * 1024 * 1024) { // less than 1GB
