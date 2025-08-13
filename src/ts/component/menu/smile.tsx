@@ -558,6 +558,7 @@ const MenuSmile = observer(class MenuSmile extends React.Component<I.Menu, State
 					const item = J.Emoji.emojis[id] || {};
 					return { 
 						id, 
+						name: item.name,
 						skin: this.skin, 
 						keywords: item.keywords || [], 
 						skins: item.skins || [],
@@ -569,7 +570,7 @@ const MenuSmile = observer(class MenuSmile extends React.Component<I.Menu, State
 		if (filter) {
 			sections = sections.filter((s: any) => {
 				s.children = (s.children || []).filter(c => {
-					if (c.id.match(reg)) {
+					if (c.id.match(reg) || c.name.match(reg)) {
 						return true;
 					};
 					for (const w of c.keywords) {
@@ -814,6 +815,7 @@ const MenuSmile = observer(class MenuSmile extends React.Component<I.Menu, State
 					break;
 				};
 			};
+
 			close();
 		});
 
@@ -843,6 +845,7 @@ const MenuSmile = observer(class MenuSmile extends React.Component<I.Menu, State
 
 				case Tab.Library: {
 					this.onObjectSelect(this.active.id);
+					close();
 					break;
 				};
 			};
@@ -1047,6 +1050,7 @@ const MenuSmile = observer(class MenuSmile extends React.Component<I.Menu, State
 
 			case Tab.Library: {
 				this.onObjectSelect(item.id);
+				close();
 				break;
 			};
 		};

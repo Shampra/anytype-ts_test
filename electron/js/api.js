@@ -5,6 +5,7 @@ const path = require('path');
 const keytar = require('keytar');
 const { download } = require('electron-dl');
 const si = require('systeminformation');
+const { exec, execFile } = require('child_process');
 const checkDiskSpace = require('check-disk-space').default;
 
 const MenuManager = require('./menu.js');
@@ -30,6 +31,7 @@ class Api {
 		};
 
 		Util.send(win, 'init', {
+			id: win.id,
 			dataPath: Util.dataPath(),
 			config: ConfigManager.config,
 			isDark: Util.isDarkTheme(),
@@ -49,6 +51,14 @@ class Api {
 
 	pinCheck (win) {
 		WindowManager.sendToAll('pin-check');
+	};
+
+	pinSet (win) {
+		WindowManager.sendToAll('pin-set');
+	};
+
+	pinRemove (win) {
+		WindowManager.sendToAll('pin-remove');
 	};
 
 	setConfig (win, config, callBack) {
@@ -155,8 +165,35 @@ class Api {
 		shell.openExternal(url);
 	};
 
-	openPath (win, path) {
-		shell.openPath(path);
+	openPath (win, fp) {
+		if (!fp || !fs.existsSync(fp)) {
+			Util.log('error', '[Api].openPath: Invalid path:', fp);
+			return;
+		};
+
+		fp = path.normalize(fp);
+
+		if (is.macos) {
+			execFile('open', [ fp ], (err) => {
+				if (err) {
+					Util.log('error', '[Api].openPath error:', err);
+				};
+			});
+		} else 
+		if (is.windows) {
+			exec(`start "" "${fp}"`, { shell: 'cmd.exe' }, (err) => {
+				if (err) {
+					Util.log('error', '[Api].openPath error:', err);
+				};
+			});
+		} else 
+		if (is.linux) {
+			execFile('xdg-open', [ fp ], (err) => {
+				if (err) {
+					Util.log('error', '[Api].openPath error:', err);
+				};
+			});
+		};
 	};
 
 	shutdown (win, relaunch) {

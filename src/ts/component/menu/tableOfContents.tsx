@@ -54,7 +54,7 @@ const MenuTableOfContents = observer(forwardRef<I.MenuRef, I.Menu>((props, ref) 
 			sidebar.rightPanelToggle(true, isPopup, 'object/tableOfContents', { rootId, blockId });
 			close();
 		} else {
-			U.Common.scrollToHeader(item, isPopup);
+			U.Common.scrollToHeader(rootId, item, isPopup);
 		};
 	};
 
@@ -80,7 +80,7 @@ const MenuTableOfContents = observer(forwardRef<I.MenuRef, I.Menu>((props, ref) 
 			name={<Label text={U.Common.getLatex(item.text)} />}
 			onClick={e => onClick(e, item)}
 			onMouseEnter={e => onMouseEnter(e, item)}
-			style={{ ...item.style, paddingLeft: 8 + item.depth * 16 }}
+			style={{ ...item.style, paddingLeft: 16 + item.depth * 12 }}
 		/>
 	);
 

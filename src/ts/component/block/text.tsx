@@ -23,7 +23,6 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 	node: any = null;
 	refLang: any = null;
 	refEditable: any = null;
-	timeoutContext = 0;
 	timeoutClick = 0;
 	timeoutFilter = 0;
 	marks: I.Mark[] = [];
@@ -52,6 +51,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		this.onSelectIcon = this.onSelectIcon.bind(this);
 		this.onUploadIcon = this.onUploadIcon.bind(this);
 		this.onCompositionEnd = this.onCompositionEnd.bind(this);
+		this.onBeforeInput = this.onBeforeInput.bind(this);
 	};
 
 	render () {
@@ -208,6 +208,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 					onInput={this.onInput}
 					onDragStart={e => e.preventDefault()}
 					onCompositionEnd={this.onCompositionEnd}
+					onBeforeInput={this.onBeforeInput}
 				/>
 			</div>
 		);
@@ -246,7 +247,17 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 			onUpdate();
 		};
 	};
-	
+
+	componentWillUnmount(): void {
+		S.Common.clearTimeout('blockContext');
+		window.clearTimeout(this.timeoutFilter);
+		window.clearTimeout(this.timeoutClick);
+
+		if (this.frame) {
+			raf.cancel(this.frame);
+		};
+	};
+
 	setValue (v: string, restoreRange?: I.TextRange) {
 		const { rootId, block, renderLinks, renderObjects, renderMentions, renderEmoji } = this.props;
 		const fields = block.fields || {};
@@ -261,19 +272,19 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 		// Only apply unicode replacements if not composing IME
 		if (block.isTextCode()) {
-			const lang = U.Prism.aliasMap[fields.lang] || 'plain';fields.lang;
+			const lang = U.Prism.aliasMap[fields.lang] || 'plain';
 			const grammar = Prism.languages[lang] || {};
 
 			html = Prism.highlight(html, grammar, lang);
 			this.refLang?.setValue(lang);
-		} else 
-		if (!keyboard.isComposition) {
-			const parsed = Mark.fromUnicode(html, this.marks);
-
-			html = parsed.text;
-			this.marks = parsed.marks;
-			html = Mark.toHtml(html, this.marks);
 		} else {
+			if (!keyboard.isComposition) {
+				const parsed = Mark.fromUnicode(html, this.marks, false);
+
+				html = parsed.text;
+				this.marks = parsed.marks;
+			};
+
 			html = Mark.toHtml(html, this.marks);
 		};
 
@@ -308,9 +319,8 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 	
 	renderLatex () {
 		const { block } = this.props;
-		const ref = this.refEditable;
 
-		if (block.isTextCode() || !ref) {
+		if (block.isTextCode() || block.isTextTitle() || !this.refEditable) {
 			return;
 		};
 
@@ -318,7 +328,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		const html = U.Common.getLatex(value);
 
 		if (html !== value) {
-			ref.setValue(html);
+			this.refEditable.setValue(html);
 		};
 	};
 
@@ -588,18 +598,21 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		if (range && ((range.from != range.to) || block.isTextCode()) && Object.keys(twinePairs).includes(key)) {
 			e.preventDefault();
 
-			const length = key.length;
-			const cut = value.slice(range.from, range.to);
-			const closing = twinePairs[key] || key;
+			if ((key == '`') && !block.isTextCode()) {
+				this.marks.push({ type: I.MarkType.Code, range: { from: range.from, to: range.to } });
+			} else {
+				const length = key.length;
+				const cut = value.slice(range.from, range.to);
+				const closing = twinePairs[key] || key;
 
-			value = U.Common.stringInsert(value, `${key}${cut}${closing}`, range.from, range.to);
+				value = U.Common.stringInsert(value, `${key}${cut}${closing}`, range.from, range.to);
+				this.marks = Mark.adjust(this.marks, range.from - length, closing.length);
+			};
 
-			this.marks = Mark.adjust(this.marks, range.from, length + closing.length);
+			this.setValue(value);
 
-			U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => {
-				focus.set(block.id, { from: range.from + length, to: range.to + length });
-				focus.apply();
-			});
+			focus.set(block.id, { from: range.from + length, to: range.to + length });
+			focus.apply();
 
 			ret = true;
 		};
@@ -854,6 +867,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 		raf(() => {
 			S.Menu.open('blockMention', {
+				classNameWrap: 'fromBlock',
 				element,
 				recalcRect: () => {
 					const rect = U.Common.getSelectionRect();
@@ -872,6 +886,10 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 					skipIds: [ rootId ],
 					canAdd: true,
 					onChange: (object: any, text: string, marks: I.Mark[], from: number, to: number) => {
+						if (S.Menu.isAnimating('blockMention')) {
+							return;
+						};
+
 						value = U.Common.stringInsert(value, text, from, from);
 
 						U.Data.blockSetText(rootId, block.id, value, marks, true, () => {
@@ -897,6 +915,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 		S.Menu.open('smile', {
 			element: `#block-${block.id}`,
+			classNameWrap: 'fromBlock',
 			recalcRect: () => {
 				const rect = U.Common.getSelectionRect();
 				return rect ? { ...rect, y: rect.y + win.scrollTop() } : null;
@@ -1109,10 +1128,9 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		};
 
 		keyboard.setFocus(true);
-		window.clearTimeout(this.timeoutContext);
 		S.Menu.closeAll([ 'blockAdd', 'blockMention' ]);
 
-		this.timeoutContext = window.setTimeout(() => {
+		S.Common.setTimeout('blockContext', 150, () => {
 			const onChange = (marks: I.Mark[]) => {
 				this.setValue(value);
 				this.marks = marks;
@@ -1138,6 +1156,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 
 			this.setText(this.marks, true, () => {
 				S.Menu.open('blockContext', {
+					classNameWrap: 'fromBlock',
 					element: el,
 					recalcRect: () => { 
 						const rect = U.Common.getSelectionRect();
@@ -1169,7 +1188,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 					});
 				}, S.Menu.getTimeout());
 			});
-		}, 150);
+		});
 	};
 	
 	onMouseDown (e: any) {
@@ -1208,6 +1227,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		const { rootId, block } = this.props;
 		
 		C.BlockTextSetIcon(rootId, block.id, icon, '');
+		Storage.set('calloutIcon', icon);
 	};
 
 	onUploadIcon (objectId: string) {
@@ -1240,6 +1260,24 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		const r = range !== undefined ? range : this.getRange();
 
 		this.setValue(v, r);
+	};
+
+	onBeforeInput = (e: any) => {
+		const range = this.getRange();
+
+		let html = this.refEditable ? this.refEditable.getHtmlValue() : '';
+
+		if (!/<(font|span)/.test(html)) {
+			return;
+		};
+
+		raf(() => {
+			html = html.replace(/<\/?font[^>]*>/g, '');
+			html = html.replace(/<span[^>]*>(.*?)<\/span>/g, '$1');
+
+			this.refEditable.setValue(html);
+			this.refEditable.setRange(range);
+		});
 	};
 	
 });

@@ -123,7 +123,8 @@ export enum EdgeType {
 export enum Usecase {
 	None		 = 0,
 	GetStarted	 = 1,
-	Empty		 = 2,
+	DataSpace	 = 2,
+	ChatSpace	 = 5,
 };
 
 export enum HomePredefinedId {
@@ -244,12 +245,6 @@ export enum SliceOperation {
 	Move			 = 2,
 	Remove			 = 3,
 	Replace			 = 4,
-};
-
-export enum FileSyncStatus {
-	Unknown			 = 0,
-	Synced			 = 1,
-	NotSynced		 = 2,
 };
 
 export enum ObjectContainerType {

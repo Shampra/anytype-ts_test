@@ -32,6 +32,7 @@ import Menu from './menu';
 import MenuItemVertical from './menu/item/vertical';
 
 import Notification from './notification';
+import Banner from './util/banner';
 
 import Popup from './popup';
 import Frame from './util/frame';
@@ -44,6 +45,7 @@ import Deleted from './util/deleted';
 import Progress from './util/progress';
 import DotIndicator from './util/dotIndicator';
 import EmptySearch from './util/emptySearch';
+import EmptyState from './util/emptyState';
 
 import Input from './form/input';
 import InputWithFile from './form/inputWithFile';
@@ -99,7 +101,6 @@ import ShareTooltip from './util/share/tooltip';
 import ShareBanner from './util/share/banner';
 import FooterAuthDisclaimer from './footer/auth/disclaimer';
 
-import Floater from './util/floater';
 import QR from './util/qr';
 
 export {
@@ -154,6 +155,7 @@ export {
 	TabSwitch,
 
 	EmptySearch,
+	EmptyState,
 	Popup,
 	Frame,
 	Cover,
@@ -161,6 +163,7 @@ export {
 	Label,
 	Error,
 	Notification,
+	Banner,
 
 	Icon,
 	IconObject,
@@ -199,7 +202,6 @@ export {
 	FooterAuthDisclaimer,
 
 	EmailCollection,
-	Floater,
 	HeadSimple,
 	EditorControls,
 

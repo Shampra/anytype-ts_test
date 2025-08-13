@@ -298,7 +298,9 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 	};
 
 	componentDidUpdate () {
-		const { viewId } = S.Record.getMeta(this.getSubId(), '');
+		const { block, isPopup } = this.props;
+		const match = keyboard.getMatch(isPopup);
+		const viewId = match.params.viewId || block.content.viewId;
 
 		if (viewId && (viewId != this.viewId)) {
 			this.loadData(viewId, 0, true);
@@ -592,6 +594,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		const hoverArea = node.find('.hoverArea');
 
 		const menuParam: any = {
+			classNameWrap: 'fromBlock',
 			onOpen: (context: any) => {
 				this.menuContext = context;
 				hoverArea.addClass('active');
@@ -727,9 +730,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				if (U.Object.isNoteLayout(object.layout)) {
 					this.onCellClick(e, 'name', object.id, object);
 				} else {
-					window.setTimeout(() => {
-						this.setRecordEditingOn(e, object.id);
-					}, 15);
+					window.setTimeout(() => this.setRecordEditingOn(e, object.id), 15);
 				};
 
 				analytics.createObject(object.type, object.layout, this.analyticsRoute(), message.middleTime);
@@ -816,6 +817,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 		S.Menu.open('dataviewNew', {
 			...menuParam,
+			classNameWrap: 'fromBlock',
 			offsetY: 10,
 			noAnimation: true,
 			subIds: J.Menu.dataviewTemplate.concat([ 'dataviewTemplateContext' ]),
@@ -936,12 +938,17 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			return;
 		};
 
+		if (relationKey == 'name' && (relation.isReadonlyValue || record.isReadonly)) {
+			U.Object.openConfig(record);
+			return;
+		};
+
 		if (!view.isGrid() && Relation.isUrl(relation.format) && !isRecordEditing) {
 			Action.openUrl(Relation.checkUrlScheme(relation.format, record[relationKey]));
 			return;
 		};
 
-		if ((relationKey == 'name') && ref.isEditing && !ref.isEditing() &&  !isRecordEditing) {
+		if ((relationKey == 'name') && ref.isEditing && !ref.isEditing() && !isRecordEditing) {
 			const ids = selection?.get(I.SelectType.Record) || [];
 
 			if (keyboard.withCommand(e)) {
@@ -1003,6 +1010,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		};
 
 		S.Menu.open('objectContext', {
+			classNameWrap: 'fromBlock',
 			recalcRect: () => { 
 				const { x, y } = keyboard.mouse.page;
 				return { width: 0, height: 0, x: x + 4, y: y };
@@ -1095,6 +1103,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 		S.Menu.open('searchObject', Object.assign({
 			element: $(element),
 			className: 'single',
+			classNameWrap: 'fromBlock',
 			data: {
 				rootId,
 				blockId: block.id,
@@ -1116,6 +1125,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 		S.Menu.closeAll(null, () => {
 			S.Menu.open('dataviewSource', {
+				classNameWrap: 'fromBlock',
 				element,
 				horizontal: I.MenuDirection.Center,
 				onOpen: () => element.addClass('active'), 
@@ -1154,6 +1164,7 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 	};
 
 	onRecordDrop (targetId: string, ids: string[]) {
+		const { rootId, block } = this.props;
 		const selection = S.Common.getRef('selectionProvider');
 		const subId = this.getSubId();
 		const view = this.getView();
@@ -1176,8 +1187,24 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 			records = arrayMove(records, oldIndex, targetIndex);
 		});
 
-		S.Record.recordsSet(subId, '', records);
-		this.objectOrderUpdate([ { viewId: view.id, groupId: '', objectIds: records } ], records);
+		const cb = () => {
+			S.Record.recordsSet(subId, '', records);
+			this.objectOrderUpdate([ { viewId: view.id, groupId: '', objectIds: records } ], records, () => S.Record.recordsSet(subId, '', records));
+		};
+
+		if (view.sorts.length) {
+			S.Popup.open('confirm', {
+				data: {
+					title: translate('popupConfirmSortRemoveTitle'),
+					textConfirm: translate('commonRemove'),
+					onConfirm: () => {
+						C.BlockDataviewSortRemove(rootId, block.id, view.id, view.sorts.map(it => it.id), cb);
+					},
+				},
+			});
+		} else {
+			cb();
+		};
 	};
 
 	onSortAdd (item: any, callBack?: () => void) {
@@ -1476,16 +1503,14 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 	setRecordEditingOn (e: any, id: string) {
 		const ref = this.refRecords.get(id);
-		if (!ref || !ref.setIsEditing) {
-			return;
-		};
-
 		const nameId = Relation.cellId(this.getIdPrefix(), 'name', id);
 		const nameRef = this.refCells.get(nameId);
 		const win = $(window);
 
-		ref.setIsEditing(true);
-		this.editingRecordId = id;
+		if (ref && ref.setIsEditing) {
+			ref.setIsEditing(true);
+			this.editingRecordId = id;
+		};
 
 		if (nameRef) {
 			nameRef.onClick(e);
@@ -1513,15 +1538,13 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 
 		win.off(`mousedown.record-${id} keydown.record-${id}`);
 
-		if (!ref || !ref.setIsEditing) {
-			return;
-		};
-
 		const nameId = Relation.cellId(this.getIdPrefix(), 'name', id);
 		const nameRef = this.refCells.get(nameId);
 
-		ref.setIsEditing(false);
-		this.editingRecordId = '';
+		if (ref && ref.setIsEditing) {
+			ref.setIsEditing(false);
+			this.editingRecordId = '';
+		};
 
 		if (nameRef) {
 			nameRef.onBlur();

@@ -164,6 +164,23 @@ export const SpaceDelete = (spaceId:string, callBack?: (message: any) => void) =
 	dispatcher.request(SpaceDelete.name, request, callBack);
 };
 
+export const SpaceSetOrder = (id: string, spaceViewOrder: string[], callBack?: (message: any) => void) => {
+	const request = new Rpc.Space.SetOrder.Request();
+
+	request.setSpaceviewid(id);
+	request.setSpacevieworderList(spaceViewOrder);
+
+	dispatcher.request(SpaceSetOrder.name, request, callBack);
+};
+
+export const SpaceUnsetOrder = (id: string, callBack?: (message: any) => void) => {
+	const request = new Rpc.Space.UnsetOrder.Request();
+
+	request.setSpaceviewid(id);
+
+	dispatcher.request(SpaceUnsetOrder.name, request, callBack);
+};
+
 // ---------------------- ACCOUNT ---------------------- //
 
 export const AccountCreate = (name: string, avatarPath: string, storePath: string, icon: number, mode: I.NetworkMode, networkConfigPath: string, callBack?: (message: any) => void) => {
@@ -296,7 +313,6 @@ export const FileUpload = (spaceId: string, url: string, path: string, type: I.F
 		return;
 	};
 
-	const { config } = S.Common;
 	const request = new Rpc.File.Upload.Request();
 
 	request.setSpaceid(spaceId);
@@ -1327,16 +1343,6 @@ export const ObjectCreateSet = (sources: string[], details: any, templateId: str
 	dispatcher.request(ObjectCreateSet.name, request, callBack);
 };
 
-export const ObjectCreateBookmark = (details: any, spaceId: string, templateId: string, callBack?: (message: any) => void) => {
-	const request = new Rpc.Object.CreateBookmark.Request();
-
-	request.setDetails(Encode.struct(details));
-	request.setSpaceid(spaceId);
-	request.setTemplateid(templateId);
-
-	dispatcher.request(ObjectCreateBookmark.name, request, callBack);
-};
-
 export const ObjectCreateFromUrl = (details: any, spaceId: string, typeKey: string, url: string, withContent: boolean, templateId: string, callBack?: (message: any) => void) => {
 	const request = new Rpc.Object.CreateFromUrl.Request();
 
@@ -1348,6 +1354,16 @@ export const ObjectCreateFromUrl = (details: any, spaceId: string, typeKey: stri
 	request.setTemplateid(templateId);
 
 	dispatcher.request(ObjectCreateFromUrl.name, request, callBack);
+};
+
+export const ObjectCreateBookmark = (details: any, spaceId: string, templateId: string, callBack?: (message: any) => void) => {
+	const request = new Rpc.Object.CreateBookmark.Request();
+
+	request.setDetails(Encode.struct(details));
+	request.setSpaceid(spaceId);
+	request.setTemplateid(templateId);
+
+	dispatcher.request(ObjectCreateBookmark.name, request, callBack);
 };
 
 export const ObjectCreateObjectType = (details: any, flags: I.ObjectFlag[], spaceId: string, callBack?: (message: any) => void) => {
@@ -1414,7 +1430,7 @@ export const ObjectOpen = (objectId: string, traceId: string, spaceId: string, c
 		const object = S.Detail.get(objectId, objectId, []);
 
 		if (!object._empty_ && ![ I.ObjectLayout.Dashboard ].includes(object.layout) && !keyboard.isPopup()) {
-			Storage.setLastOpened(U.Common.getCurrentElectronWindowId(), { id: object.id, layout: object.layout });
+			Storage.setLastOpened(S.Common.windowId, { id: object.id, layout: object.layout });
 		};
 
 		if (callBack) {
@@ -1802,15 +1818,6 @@ export const ObjectToCollection = (contextId: string, callBack?: (message: any) 
 	dispatcher.request(ObjectToCollection.name, request, callBack);
 };
 
-export const ObjectToBookmark = (contextId: string, url: string, callBack?: (message: any) => void) => {
-	const request = new Rpc.Object.ToBookmark.Request();
-
-	request.setContextid(contextId);
-	request.setUrl(url);
-
-	dispatcher.request(ObjectToBookmark.name, request, callBack);
-};
-
 export const ObjectDuplicate = (id: string, callBack?: (message: any) => void) => {
 	const request = new Rpc.Object.Duplicate.Request();
 
@@ -1937,6 +1944,7 @@ export const ObjectListExport = (spaceId: string, path: string, objectIds: strin
 	request.setIncludefiles(includeFiles);
 	request.setIncludearchived(includeArchived);
 	request.setIsjson(isJson);
+	request.setMdincludepropertiesandschema(true);
 
 	dispatcher.request(ObjectListExport.name, request, callBack);
 };

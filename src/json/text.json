@@ -156,7 +156,6 @@
 	"commonUpdate": "Update",
 	"commonUpdateNow": "Update Now",
 	"commonOwner": "Owner",
-	"commonUpdateProgress": "Downloading update... %s/%s",
 	"commonVersionHistory": "Version History",
 	"commonActions": "Actions",
 	"commonAddRelation": "Add Property",
@@ -218,6 +217,11 @@
 	"commonMute": "Mute",
 	"commonUnmute": "Unmute",
 	"commonDropFiles": "Drag and drop your files here",
+	"commonObjectEmpty": "It's empty here.",
+	"commonSynced": "Synced",
+	"commonNotSynced": "Not synced",
+	"commonNewVersion": "Version <span class='hl'>%s</span> is out now",
+	"commonUpgrade": "✦ Upgrade",
 
 	"pluralDay": "day|days",
 	"pluralObject": "Object|Objects",
@@ -243,6 +247,7 @@
 	"pluralVideo": "Video|Videos",
 	"pluralAudio": "Audio|Audios",
 	"pluralFile": "File|Files",
+	"pluralLCFile": "file|files",
 	"pluralPdf": "Pdf|Pdfs",
 	"pluralBookmark": "Bookmark|Bookmarks",
 	"pluralAttachment": "Attachment|Attachments",
@@ -385,8 +390,7 @@
 	"progressMigration": "Recovering vault...",
 	"progressRecoverAccount": "Migration in progress...",
 	"progressUpdate": "Update...",
-	"progressUpdateDownloading": "Downloading",
-	"progressUpdateCheck": "Checking for update...",
+	"progressUpdateDownloading": "Downloading update",
 
 	"spellcheckAdd": "Add to dictionary",
 
@@ -530,8 +534,7 @@
 
 	"pageAuthDeletedAccountDeletionTitle": "This vault is planned for deletion in %s",
 
-	"pageAuthOnboardPersonalSpace": "Entry Space",
-	"pageAuthOnboardMoreInfo": "More info",
+	"pageAuthOnboardCopyKey": "Copy Key",
 
 	"pageAuthSetupImportTitle": "We couldn’t recover your vault.",
 	"pageAuthSetupImportText": "Double-check your recovery phrase — extra spaces or typos can break it.",
@@ -570,13 +573,16 @@
 
 	"pageSettingsSpaceGeneral": "General",
 	"pageSettingsSpaceRemoteStorage": "Remote Storage",
-	"pageSettingsSpaceCleanupSpaceFiles": "Clean up space files",
+	"pageSettingsSpaceSyncedFiles": "Synced files",
+	"pageSettingsSpaceNotSyncedFiles": "Not synced files",
 	"pageSettingsSpaceIntegrations": "Integrations",
 	"pageSettingsSpaceManageContent": "Content Model",
 
-	"pageSettingsSpaceIndexEditInfo": "Edit info",
+	"pageSettingsSpaceIndexEdit": "Edit",
 	"pageSettingsSpaceIndexInviteMembers": "Invite Members",
+	"pageSettingsSpaceIndexAddMembers": "Add members",
 	"pageSettingsSpaceIndexQRCode": "QR code",
+	"pageSettingsSpaceIndexCopyLink": "Copy link",
 	"pageSettingsSpaceIndexSpaceMembers": "Space Members",
 	"pageSettingsSpaceIndexEntrySpaceTooltip": "Entry Space cannot be shared.<br/>Create a new one to invite members.",
 
@@ -835,6 +841,8 @@
 	"popupSettingsApiCopyMcp": "Copy MCP Config",
 	"popupSettingsApiMcpConfig": "MCP Config",
 
+	"popupSettingsApiEmpty": "You haven’t created any API keys yet",
+
 	"popupApiCreateTitle": "Create new API key",
 	"popupApiCreateSuccess": "API key successfully created",
 	"popupApiCreatePlaceholder": "Key name",
@@ -871,6 +879,7 @@
 
 	"popupSettingsDataManagementDataPublishTitle": "My Sites",
 	"popupSettingsDataManagementDataPublishDate": "Published date",
+	"popupSettingsDataManagementDataPublishEmpty": "You haven’t published anything to the web yet.<br/>Open an object and hit <b>Share → Publish to Web</b> to make it live.",
 
 	"popupSettingsSpaceIndexTitle": "Space Settings",
 	"popupSettingsSpaceIndexDescriptionPlaceholder": "Describe your space",
@@ -893,8 +902,8 @@
 
 	"popupSettingsSpaceIndexCollaborationTitle": "Collaboration",
 	"popupSettingsSpaceIndexManageSpaceTitle": "Space Preferences",
-	"popupSettingsSpaceIndexRemoteStorageUpgrade": "✦ Upgrade",
 	"popupSettingsSpaceIndexStorageText": "You can store up to %s of your files on our encrypted backup node for free. If you reach the limit, files will be stored only locally.",
+	"popupSettingsSpaceIndexStorageIsFullText": "Some files couldn't be synced because your storage is full. Upgrade your plan or remove files to free up space.",
 	"popupSettingsSpaceIndexStorageManageFiles": "Manage files",
 	"popupSettingsSpaceIndexHomepageDescription": "Select an Object to show when you login",
 	"popupSettingsSpaceIndexImport": "Import to Space",
@@ -907,9 +916,12 @@
 	"popupSettingsSpaceIndexAutoWidgetsTitle": "Auto Create Type Widgets",
 	"popupSettingsSpaceIndexAutoWidgetsText": "Add a widget when the first object of a type is created",
 	"popupSettingsSpaceIndexPushTitle": "Message notifications",
-	"popupSettingsSpaceIndexPushText": "You will receive notifications when you are mentioned only",
+	"popupSettingsSpaceIndexPushText0": "You will receive all notifications",
+	"popupSettingsSpaceIndexPushText1": "You will receive notifications when you are mentioned only",
+	"popupSettingsSpaceIndexPushText2": "You won't receive any notifications",
+	"popupSettingsSpaceIndexUxTypeTitle": "Space UX Type",
 
-	"popupSettingsSpaceStorageManagerEmptyLabel": "Your storage is empty",
+	"popupSettingsSpaceStorageEmptyLabel": "Your storage is empty",
 
 	"popupSettingsImportTitle": "Import",
 	"popupSettingsImportText": "Choose application or format of data source",
@@ -939,28 +951,30 @@
 
 	"popupSettingsSpaceHomepageText": "Select an Object to show when you login",
 
-	"popupSettingsSpaceShareTitle": "Sharing",
+	"popupSettingsSpaceShareTitle": "Members",
 	"popupSettingsSpaceShareInviteLinkTitle": "Invite link",
-	"popupSettingsSpaceShareInviteLinkLabel": "Share this link to invite others to your Space.",
-	"popupSettingsSpaceShareInviteLinkDisabled": "Invitations are disabled by the space owner. In order to have an ability to invite people. please ask space owner to generate an invite link.",
 	"popupSettingsSpaceShareInvitesReaderLimitReachedLabel": "You can't add more members",
 	"popupSettingsSpaceShareInvitesReaderLimitReachedButton": "✦ Upgrade to add more members",
 	"popupSettingsSpaceShareInvitesWriterLimitReachedLabel": "You can't add more editors",
 	"popupSettingsSpaceShareInvitesWriterLimitReachedButton": "✦ Upgrade to add more editors",
 
+	"popupSettingsSpaceShareMenuInviteNoneTitle": "Link disabled",
+	"popupSettingsSpaceShareMenuInviteNoneDescription": "Only invited members have access",
+	"popupSettingsSpaceShareMenuInviteEditorTitle": "Editor access",
+	"popupSettingsSpaceShareMenuInviteEditorDescription": "People with link can edit and write in chat",
+	"popupSettingsSpaceShareMenuInviteViewerTitle": "Viewer access",
+	"popupSettingsSpaceShareMenuInviteViewerDescription": "People with link can view and read chat",
+	"popupSettingsSpaceShareMenuInviteManualTitle": "Request access",
+	"popupSettingsSpaceShareMenuInviteManualDescription": "Owner must approve each join request",
+
 	"popupSettingsSpaceShareJoinRequest": "Join Request",
 	"popupSettingsSpaceShareLeaveRequest": "Leave Request",
 	"popupSettingsSpaceShareViewRequest": "View request",
 	"popupSettingsSpaceShareRemoveMember": "Remove member",
-	"popupSettingsSpaceShareStopSharing": "Stop sharing",
-	"popupSettingsSpaceShareRevokeInvite": "Delete link",
 	"popupSettingsSpaceShareGenerateInvite": "Generate invite link",
 	"popupSettingsSpaceShareGenerateLinkWithoutApprove": "Generate link without approve",
 	"popupSettingsSpaceShareGenerateInviteDisabled": "You need to be online to share the space",
-	"popupSettingsSpaceShareShowQR": "Show QR code",
-
-	"popupSettingsSpaceShareLinkWithApproveLabel": "This link requires manual approve from space owner. Once they request to join, you can set their access rights.",
-	"popupSettingsSpaceShareLinkWithoutApproveLabel": "This link doesn't require manual approve from space owner.",
+	"popupSettingsSpaceShareQRCode": "QR code",
 
 	"popupSettingsSpaceRemove": "Move %s to Bin?",
 	"popupSettingsSpaceRemoveTitle": "Move to Bin",
@@ -974,7 +988,7 @@
 	"popupSettingsMembershipSlide0Title": "Build the Vision Together",
 	"popupSettingsMembershipSlide0Text": "As a valued member your voice matters! Engage in exclusive events, shape strategic choices, and influence our roadmap.",
 	"popupSettingsMembershipSlide1Title": "Unlock Member Benefits",
-	"popupSettingsMembershipSlide1Text": "Members enjoy higher backup storage & sync limits, invitations for multiple guests to collaborate in shared spaces, and a unique identity on the Anytype Network.",
+	"popupSettingsMembershipSlide1Text": "Members enjoy higher backup storage & sync limits, invitations for multiple guests to collaborate in spaces, and a unique identity on the Anytype Network.",
 	"popupSettingsMembershipSlide2Title": "Support Digital Independence",
 	"popupSettingsMembershipSlide2Text": "Your contribution supports our team and endorses <a href=\"%s\">our&nbsp;vision</a> of a user-owned, secure, and collaborative digital network.",
 	"popupSettingsMembershipSlide3Title": "Invest in Connectivity",
@@ -1154,9 +1168,6 @@
 	"popupConfirmConfirmationText": "Input this text to confirm:",
 	"popupConfirmConfirmationTextError": "Text does not match",
 
-	"popupConfirmUpdatePromptTitle": "Update available",
-	"popupConfirmUpdatePromptText": "Do you want to update on a new version?",
-	"popupConfirmUpdatePromptRestartOk": "Restart and update",
 	"popupConfirmUpdatePromptCancel": "Later",
 	"popupConfirmUpdateDoneTitle": "You are up-to-date",
 	"popupConfirmUpdateDoneText": "You are on the latest version: %s",
@@ -1170,30 +1181,26 @@
 	"popupConfirmObjectOpenErrorText": "There was a problem while opening the object, please send the debug info to the support team.",
 	"popupConfirmObjectOpenErrorButton": "Collect debug info",
 
-	"popupConfirmStopSharingSpaceTitle": "Stop sharing the space",
-	"popupConfirmStopSharingSpaceText": "Members will no longer sync to this space and the share link will be deactivated.",
-	"popupConfirmStopSharingSpaceConfirm": "Stop sharing",
-
 	"popupConfirmMemberRemoveTitle": "Remove member",
 	"popupConfirmMemberRemoveText": "<b>%s</b> will be removed from the space",
 
 	"popupConfirmMemberChangeText": "<b>%s</b> access to the space would become <b>%s</b>",
 
-	"popupConfirmRevokeLinkTitle": "Delete sharing link",
-	"popupConfirmRevokeLinkText": "New members won't be able to join the space. You can generate a new link anytime.",
-	"popupConfirmRevokeLinkConfirm": "Delete link",
-
-	"popupConfirmSpaceShareMoreInfoTitle": "How to share a space?",
-	"popupConfirmSpaceShareMoreInfoText": "<ul><li>Please provide the link to the person you'd like to collaborate with.</li><li>By clicking the link, a person requests to join the space.</li><li>After approving the request, you can choose the access rights for that person.</li></ul>",
+	"popupConfirmRevokeLinkTitle": "Disable invite link",
+	"popupConfirmRevokeLinkText": "New members won't be able to join the space. You can enable a new link anytime.",
+	"popupConfirmRevokeLinkConfirm": "Disable link",
 
 	"popupConfirmDuplicateSpace": "You are already a member of this space",
 	"popupConfirmInviteError": "The link you have tried to use does not seem to work",
 	"popupConfirmSpaceDeleted": "The space you try to access has been deleted",
 
-	"popupConfirmInviteError101Title": "No Access to This Space",
-	"popupConfirmInviteError101Text": "The link you are using does not seem to work. Please ask the owner to share a new one with you.",
-	"popupConfirmInviteError103Title": "Oops!",
-	"popupConfirmInviteError103Text": "The space you try to access has been deleted",
+	"popupConfirmSpaceInviteViewError101Title": "No Access to This Space",
+	"popupConfirmSpaceInviteViewError101Text": "The link you are using does not seem to work. Please ask the owner to share a new one with you.",
+	"popupConfirmSpaceInviteViewError103Title": "Oops!",
+	"popupConfirmSpaceInviteViewError103Text": "The space you try to access has been deleted",
+
+	"popupConfirmSpaceJoinError106Title": "This Space is full.",
+	"popupConfirmSpaceJoinError106Text": "The owner needs to increase the number of available editor seats or give you another link with view-only permissions.",
 
 	"popupConfirmJoinSpaceTitle": "Join %s",
 	"popupConfirmJoinSpaceText": "You've been invited to join <b>%s</b> space, created by <b>%s</b>",
@@ -1209,7 +1216,7 @@
 	"popupConfirmLostPhraseTextMac": "<p>We understand how important your key is, but Anytype doesn't store a copy of it. Your key was generated on the device and automatically saved in your macOS Keychain Access. Follow these steps to recover it:<\/p> <ul class=\"last\"><li>Open the Keychain Access application, which you can find in the Utilities folder.<\/li><li>In the Keychain Access window, select \"Login\" from the list of Keychains on the left.<\/li><li>Click on the \"Passwords\" tab to view your saved passwords.<\/li><li>Search for the entry related to Anytype and double-click on it.<\/li><li>Check the \"Show password\" box, and your key will be displayed.<\/li><\/ul><p>Copy the key and secure it safely.<\/p>",
 
 	"popupConfirmMembershipUpgradeTitle": "Membership Upgrade",
-	"popupConfirmMembershipUpgradeText": "Reach us for extra storage, space editors, or more shared spaces. Anytype team will provide details and conditions tailored to your needs.",
+	"popupConfirmMembershipUpgradeText": "Reach us for extra storage, space editors, or more spaces. Anytype team will provide details and conditions tailored to your needs.",
 	"popupConfirmMembershipUpgradeButton": "Contact Anytype Team",
 
 	"popupConfirmRelationOptionRemoveText": "Deleting relation options can affect your objects. Once confirmed, the action cannot be undone.",
@@ -1242,6 +1249,18 @@
 
 	"popupConfirmDiskSpaceTitle": "Make Space, Save Your Work",
 	"popupConfirmDiskSpaceText": "Looks like your device is almost out of space. This might cause the app to misbehave or lose your changes. Try clearing up some storage to keep everything running smoothly.",
+
+	"popupConfirmAttachmentSyncError2Title": "Incompatible Version",
+	"popupConfirmAttachmentSyncError2Text": "This version doesn’t support sending files or images. Update the app to share media in chats.",
+	"popupConfirmAttachmentSyncError3Title": "Network Error",
+	"popupConfirmAttachmentSyncError3Text": "We couldn’t connect right now. This may be due to no internet or a temporary sync issue. We’ll keep trying in the background.",
+	"popupConfirmAttachmentSyncError4Title": "File is too big for this space",
+	"popupConfirmAttachmentSyncError4Text": "...",
+
+	"popupConfirmButtonUpdateApp": "Update app",
+	"popupConfirmButtonGotIt": "Got it",
+
+	"popupConfirmSortRemoveTitle": "Would you like to remove sorting?",
 
 	"popupInviteRequestTitle": "Join a space",
 	"popupInviteRequestText": "You've been invited to join <b>%s</b> space, created by <b>%s</b>. Send a request so space owner can let you in.",
@@ -1347,6 +1366,7 @@
 	"popupShortcutMainBasics24": "Lock / Unlock Object",
 	"popupShortcutMainBasics25": "Move to / restore from Bin",
 	"popupShortcutMainBasics26": "Pin / Unpin",
+	"popupShortcutMainBasics27": "Space %d",
 
 	"popupShortcutMainTextStyle": "Text style",
 	"popupShortcutMainTextStyle1": "Bold",
@@ -1355,8 +1375,8 @@
 	"popupShortcutMainTextStyle4": "Strikethrough",
 	"popupShortcutMainTextStyle5": "Add a link",
 	"popupShortcutMainTextStyle6": "Convert to inline code",
-	"popupShortcutMainTextStyle7": "Apply previously selected font color",
-	"popupShortcutMainTextStyle8": "Apply previously selected highlight",
+	"popupShortcutMainTextStyle7": "Select font color",
+	"popupShortcutMainTextStyle8": "Select highlight",
 
 	"popupShortcutMainStructuring1": "New text block",
 	"popupShortcutMainStructuring2": "Line break",
@@ -1748,6 +1768,9 @@
 	"menuHelpGallery": "ANY Experience Gallery",
 	"menuHelpShare": "Share Anytype",
 	"menuHelpMore": "More",
+	"menuHelpDeveloper": "Developers",
+	"menuHelpDeveloperPortal": "Developers Portal",
+	"menuHelpMcp": "MCP",
 
 	"menuObjectPrint": "Print",
 	"menuObjectSearchOnPage": "Search in Object",
@@ -1813,7 +1836,6 @@
 	"menuSyncStatusInfoNetworkMessageOffline": "No connection",
 
 	"menuSyncStatusInfoSelfTitle": "Self Host",
-	"menuSyncStatusInfoSelfMessageSynced": "Synced",
 	"menuSyncStatusInfoSelfMessageSyncing": "Syncing...",
 	"menuSyncStatusInfoSelfMessageError": "Error",
 	"menuSyncStatusInfoLocalOnlyTitle": "Local Only",
@@ -1823,6 +1845,10 @@
 
 	"menuSyncStatusEmptyLocal": "Your Vault is currently in local-only mode, so your data isn't being synced to Anytype nodes.",
 	"menuSyncStatusEmpty": "There are no objects to show",
+
+	"menuSyncStatusIncentiveBannerTitle": "Files not synced",
+	"menuSyncStatusIncentiveBannerLabel": "%s %s couldn’t be synced because you’re run out of storage. Please upgrade or clean up your storage.",
+	"menuSyncStatusIncentiveBannerReviewFiles": "Review Files",
 
 	"menuPublishTitle": "Publish to web",
 	"menuPublishInfoTooltip": "Published object will be uploaded to our publishing server and will be accessible via the URL as a static, unencrypted HTML page. Linked objects will not be published.<br/>Currently, not all blocks are supported for publishing, such as Queries, Collections and Properties. Default limit is 10MB per object for free plans and 100MB for paid plans.",
@@ -1834,7 +1860,6 @@
 	"menuPublishButtonCopy": "Copy Web Link",
 	"menuPublishLabelOffline": "No internet connection",
 	"menuPublishBecomeMemberText": "Become a member to get a domain and increase publishing limits",
-	"menuPublishUpgrade": "✦ Upgrade",
 
 	"previewEdit": "Edit Link",
 
@@ -1878,7 +1903,8 @@
 	"toastApproveLeaveRequest": "You approved %s request",
 	"toastInviteCopy": "Invite link has been copied", 
 	"toastInviteGenerate": "Invite link has been created",
-	"toastInviteRevoke": "Invite link has been deleted",
+	"toastInviteUpdate": "Invite link has been changed to %s",
+	"toastInviteRevoke": "Invite link has been disabled",
 	"toastImportStart": "Import process has started and may take some time",
 
 	"toastObjectTypeAdded": "Object Type <b>%s</b> has been added to your Library",
@@ -1924,6 +1950,7 @@
 	"layout8": "Image",
 	"layout9": "Note",
 	"layout11": "Bookmark",
+	"layout19": "Space Member",
 	"layout20": "Database",
 
 	"defaultNamePage": "Untitled",
@@ -2032,6 +2059,9 @@
 	"quickOption9": "Next month",
 	"quickOption10": "Number of days ago",
 	"quickOption11": "Number of days from now",
+	"quickOption12": "Last year",
+	"quickOption13": "Current year",
+	"quickOption14": "Next year",
 
 	"sidebarMenuAll": "Spaces & widgets",
 	"sidebarMenuSidebar": "Only widgets",
@@ -2051,7 +2081,6 @@
 	"sidebarObjectSort": "Sort",
 	"sidebarObjectOrphan": "Only unlinked",
 	"sidebarObjectOrphanLabel": "Unlinked objects that do not have a direct link or backlink with other objects in the graph.",
-	"sidebarObjectEmpty": "It's empty here.",
 	"sidebarObjectEmptyCreate": "It's empty here.<br/><span class='small'>Create your first objects to get started.</span>",
 
 	"sidebarObjectSortCreated": "Date created",
@@ -2161,7 +2190,7 @@
 	"onboardingSourceDeleted1Description": "Some Objects in this Query use Types or Properties that have been removed from your Space. Visit the Library to re-install these entities and continue using your Set.",
 
 	"onboardingInlineSet1Title": "This is Inline Query",
-	"onboardingInlineSet1Description": "Congratulations! You can embed a Set or Collection and modify it using Filters and Views without altering the original instance.",
+	"onboardingInlineSet1Description": "Congratulations! You can embed a Query or Collection and modify it using Filters and Views without altering the original instance.",
 	"onboardingInlineSet2Title": "Views",
 	"onboardingInlineSet2Description": "Adjust rules and views to suit the current context.",
 
@@ -2249,6 +2278,7 @@
 	"libRelationMedium": "Medium",
 	"libRelationLarge": "Large",
 	"libRelationPageCover": "Object cover",
+	"libRelationPicture": "Picture",
 
 	"libMenuClearStyle": "Clear style",
 	"libMenuRename": "Rename",
@@ -2576,6 +2606,11 @@
 
 	"notificationMode0": "Enable all",
 	"notificationMode1": "Mentions only",
-	"notificationMode2": "Disable all"
+	"notificationMode2": "Disable all",
+
+	"spaceUxType0": "None",
+	"spaceUxType1": "Space",
+	"spaceUxType2": "Stream",
+	"spaceUxType3": "Chat"
 
 }

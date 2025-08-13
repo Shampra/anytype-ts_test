@@ -22,12 +22,33 @@ export interface ChatState {
 	messages: ChatStateCounter;
 	mentions: ChatStateCounter;
 	lastStateId: string;
+	lastMessageDate: number;
 	order: number;
+};
+
+export interface ChatStoreState {
+	messageOrderId: string;
+	messageCounter: number;
+	mentionOrderId: string;
+	mentionCounter: number;
+	lastStateId: string;
+	order: number;
+	lastMessageDate: number;
+};
+
+export interface ChatCounter {
+	mentionCounter: number; 
+	messageCounter: number;
 };
 
 export enum ChatReadType {
 	Message = 0,
 	Mention = 1,
+};
+
+export interface ChatMessageReaction {
+	icon: string;
+	authors: string[];
 };
 
 export interface ChatMessage {
@@ -39,7 +60,8 @@ export interface ChatMessage {
 	replyToMessageId: string;
 	content: ChatMessageContent;
 	attachments: ChatMessageAttachment[];
-	reactions: any;
+	reactions: ChatMessageReaction[];
+	isSynced: boolean;
 
 	// Internal
 	isFirst: boolean;
@@ -65,6 +87,7 @@ export interface ChatMessageComponent extends I.BlockComponent {
 	isNew: boolean;
 	hasMore: boolean;
 	subId: string
+	style?: any;
 	scrollToBottom?: () => void;
 	onContextMenu: (e: any) => void;
 	onMore: (e: any) => void;

@@ -24,7 +24,11 @@ const Card = observer(class Card extends React.Component<Props> {
 	};
 
 	render () {
-		const { rootId, block, recordId, getRecord, getView, onRefCell, style, onContext, getIdPrefix, getVisibleRelations, isInline, isCollection, getCoverObject, onEditModeClick } = this.props;
+		const {
+			rootId, block, recordId, isPopup, style, isInline, isCollection, getRecord, getView, onRefCell, onContext, getIdPrefix, getVisibleRelations, 
+			getCoverObject, onEditModeClick, canCellEdit,
+		} = this.props;
+		const { config } = S.Common;
 		const record = getRecord(recordId);
 		const view = getView();
 		const { cardSize, coverFit, hideIcon } = view;
@@ -33,6 +37,8 @@ const Card = observer(class Card extends React.Component<Props> {
 		const cn = [ 'card', U.Data.layoutClass(record.id, record.layout), U.Data.cardSizeClass(cardSize) ];
 		const subId = S.Record.getSubId(rootId, block.id);
 		const cover = getCoverObject(recordId);
+		const relationName: any = S.Record.getRelationByKey('name') || {};
+		const canEdit = canCellEdit(relationName, record);
 
 		if (coverFit) {
 			cn.push('coverFit');
@@ -44,12 +50,14 @@ const Card = observer(class Card extends React.Component<Props> {
 
 		let content = (
 			<div className="cardContent">
-				<ObjectCover object={cover} />
+				<ObjectCover object={cover} isPopup={isPopup} />
 
-				<Icon
-					className={[ 'editMode', (this.isEditing ? 'enabled' : '') ].join(' ')}
-					onClick={e => onEditModeClick(e, recordId)}
-				/>
+				{canEdit && config.experimental ? (
+					<Icon
+						className={[ 'editMode', (this.isEditing ? 'enabled' : '') ].join(' ')}
+						onClick={e => onEditModeClick(e, recordId)}
+					/>
+				) : ''}
 
 				<div className="inner">
 					{relations.map((vr: any) => {
@@ -145,6 +153,11 @@ const Card = observer(class Card extends React.Component<Props> {
 	};
 
 	onDragStart (e: any) {
+		if (keyboard.isFocused || this.isEditing) {
+			e.preventDefault();
+			return;
+		};
+
 		const { isCollection, recordId, getRecord, onDragRecordStart } = this.props;
 		const record = getRecord(recordId);
 
@@ -177,12 +190,11 @@ const Card = observer(class Card extends React.Component<Props> {
 	};
 
 	onCellClick (e: React.MouseEvent, vr: I.ViewRelation) {
-		const { onCellClick, recordId, getRecord, canCellEdit } = this.props;
+		const { onCellClick, recordId, getRecord } = this.props;
 		const record = getRecord(recordId);
 		const relation = S.Record.getRelationByKey(vr.relationKey);
-		const canEdit = canCellEdit(relation, record);
 
-		if (!relation || !canEdit) {
+		if (!relation) {
 			return;
 		};
 

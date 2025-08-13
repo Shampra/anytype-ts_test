@@ -24,6 +24,7 @@ export enum SyncStatusError {
 	StorageLimitExceed 		 = 1,
 	IncompatibleVersion		 = 2,
 	NetworkError 			 = 3,
+	Oversized 				 = 4,
 };
 
 export interface SyncStatus {
@@ -34,6 +35,7 @@ export interface SyncStatus {
 	p2p: P2PStatus;
 	syncingCounter: number;
 	devicesCounter: number;
+	notSyncedCounter: number;
 };
 
 export enum P2PStatus {

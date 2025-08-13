@@ -42,6 +42,7 @@ class CommonStore {
 	public timeFormatValue = null;
 	public isOnlineValue = false;
 	public showVaultValue = null;
+	public updateVersionValue = '';
 	public showSidebarRightValue = { full: { page: null }, popup: { page: null } }; // If page is null, don't show sidebar
 	public hideSidebarValue = null;
 	public pinValue = null;
@@ -52,6 +53,7 @@ class CommonStore {
 	};
 	public diffValue: I.Diff[] = [];
 	public refs: Map<string, any> = new Map();
+	public windowId = '';
 
 	public previewObj: I.Preview = { 
 		type: null, 
@@ -114,6 +116,7 @@ class CommonStore {
 			timeFormatValue: observable,
 			pinValue: observable,
 			firstDayValue: observable,
+			updateVersionValue: observable,
 			config: computed,
 			preview: computed,
 			toast: computed,
@@ -204,11 +207,7 @@ class CommonStore {
 	};
 
 	get pin (): string {
-		let ret = this.pinValue;
-		if (ret === null) {
-			ret = Storage.get('pin');
-		};
-		return String(ret || '');
+		return String(this.pinValue || '');
 	};
 
 	get pinTime (): number {
@@ -331,6 +330,10 @@ class CommonStore {
 		return Number(this.firstDayValue) || 1;
 	};
 
+	get updateVersion (): string {
+		return String(this.updateVersionValue || '');
+	};
+
 	/**
 	 * Sets the gateway URL.
 	 * @param {string} v - The gateway URL.
@@ -357,10 +360,10 @@ class CommonStore {
 	imageUrl (id: string, width: number) {
 		width = Number(width) || 0;
 
-		if (!width) {
-			width = I.ImageSize.Large;
-		} else 
-		if (width <= I.ImageSize.Small) {
+		if (width === 0) {
+			width = 10000000;
+		} else
+		if ((width > 0) && (width <= I.ImageSize.Small)) {
 			width = I.ImageSize.Small;
 		} else
 		if ((width > I.ImageSize.Small) && (width <= I.ImageSize.Medium)) {
@@ -491,12 +494,20 @@ class CommonStore {
 	};
 
 	/**
+	 * Gets the pin ID for storage.
+	 */
+	pinId () {
+		return [ S.Auth.account.id, 'pin' ].join('-');
+	};
+
+	/**
 	 * Sets the pin value.
 	 * @param {string} v - The pin value.
 	 */
 	pinSet (v: string) {
 		this.pinValue = String(v || '');
-		Storage.set('pin', this.pinValue);
+		Renderer.send('keytarSet', this.pinId(), this.pinValue);
+		Renderer.send('pinSet');
 	};
 
 	/**
@@ -504,7 +515,29 @@ class CommonStore {
 	 */
 	pinRemove () {
 		this.pinValue = null;
-		Storage.delete('pin');
+		Renderer.send('keytarDelete', this.pinId());
+		Renderer.send('pinRemove');
+	};
+
+	/**
+	 * Initializes the pin value, optionally calling a callback.
+	 * @param {() => void} callBack - The callback function to call after initialization.
+	 */
+	pinInit (callBack?: () => void) {
+		const pin = Storage.get('pin');
+
+		if (pin) {
+			this.pinSet(pin);
+			Storage.delete('pin');
+
+			callBack?.();
+		} else {
+			Renderer.send('keytarGet', this.pinId()).then((value: string) => {
+				this.pinValue = String(value || '');
+
+				callBack?.();
+			});
+		};
 	};
 
 	/**
@@ -560,6 +593,14 @@ class CommonStore {
 
 		$('body').toggleClass('isFullScreen', v);
 		$(window).trigger('resize');
+	};
+
+	/**
+	 * Sets the update version value.
+	 * @param {string} v - The update version value.
+	 */
+	updateVersionSet (v: string) {
+		this.updateVersionValue = String(v || '');
 	};
 
 	/**
@@ -797,6 +838,14 @@ class CommonStore {
 	 */
 	diffSet (diff: I.Diff[]) {
 		this.diffValue = diff || [];
+	};
+
+	/**
+	 * Sets the window ID.
+	 * @param {string} id - The window ID.
+	 */
+	windowIdSet (id: string) {
+		this.windowId = String(id || '');
 	};
 
 	/**

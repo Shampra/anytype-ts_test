@@ -1,9 +1,11 @@
 import $ from 'jquery';
 import raf from 'raf';
 import { observable } from 'mobx';
-import { I, C, S, U, J, M, keyboard, translate, Dataview, Action, analytics, Relation, Storage, sidebar } from 'Lib';
+import { I, C, S, U, J, M, keyboard, translate, Dataview, Action, analytics, Relation, sidebar } from 'Lib';
 
 class UtilMenu {
+
+	menuContext = null;
 
 	/**
 	 * Maps a block item, adding translation and aliases.
@@ -113,6 +115,7 @@ class UtilMenu {
 			{ id: I.EmbedProcessor.Graphviz, name: 'Graphviz' },
 			{ id: I.EmbedProcessor.Sketchfab, name: 'Sketchfab' },
 			{ id: I.EmbedProcessor.Drawio, name: 'Draw.io' },
+			{ id: I.EmbedProcessor.Spotify, name: 'Spotify' },
 		];
 
 		if (config.experimental) {
@@ -646,15 +649,13 @@ class UtilMenu {
 			});
 		};
 
-		let menuContext = null;
-
 		analytics.event('ClickChangeSpaceDashboard');
 
 		S.Menu.open('select', {
 			element,
 			horizontal: I.MenuDirection.Right,
 			subIds,
-			onOpen: context => menuContext = context,
+			onOpen: context => this.setContext(context),
 			onClose: () => S.Menu.closeAll(subIds),
 			data: {
 				options: [
@@ -664,7 +665,7 @@ class UtilMenu {
 					{ id: I.HomePredefinedId.Existing, name: translate('spaceExisting'), arrow: true },
 				].filter(it => it),
 				onOver: (e: any, item: any) => {
-					if (!menuContext) {
+					if (!this.menuContext) {
 						return;
 					};
 
@@ -676,8 +677,8 @@ class UtilMenu {
 					switch (item.id) {
 						case I.HomePredefinedId.Existing: {
 							S.Menu.open('searchObject', {
-								element: `#${menuContext.getId()} #item-${item.id}`,
-								offsetX: menuContext.getSize().width,
+								element: `#${this.menuContext.getId()} #item-${item.id}`,
+								offsetX: this.menuContext.getSize().width,
 								vertical: I.MenuDirection.Center,
 								isSub: true,
 								data: {
@@ -688,7 +689,7 @@ class UtilMenu {
 									canAdd: true,
 									onSelect: el => {
 										onSelect(el, true);
-										menuContext.close();
+										this.menuContext?.close();
 
 										analytics.event('ChangeSpaceDashboard', { type: I.HomePredefinedId.Existing });
 									},
@@ -781,119 +782,81 @@ class UtilMenu {
 
 	spaceContext (space: any, param: any) {
 		const { targetSpaceId } = space;
-		const isOwner = U.Space.isMyOwner(targetSpaceId);
-		const isLocalNetwork = U.Data.isLocalNetwork();
-		const { isOnline } = S.Common;
 		const options: any[] = [];
+		const pinned = this.getVaultItems().filter(it => it.isPinned);
 
-		let cid = '';
-		let key = '';
+		if (space.spaceOrder) {
+			options.push({ id: 'unpin', name: translate('commonUnpin') });
+		} else 
+		if (pinned.length < J.Constant.limit.space.pin) {
+			options.push({ id: 'pin', name: translate('commonPin') });
+		};
 
-		const cb = () => {
-			if (isOwner && space.isShared && !isLocalNetwork && isOnline && cid && key) {
-				options.push({ id: 'revoke', name: translate('popupSettingsSpaceShareRevokeInvite') });
-			};
-
+		if (space.chatId) {
 			if ([ I.NotificationMode.Nothing, I.NotificationMode.Mentions ].includes(space.notificationMode)) {
 				options.push({ id: 'unmute', name: translate('commonUnmute') });
 			} else {
 				options.push({ id: 'mute', name: translate('commonMute') });
 			};
+		};
 
-			if (space.isAccountRemoving) {
-				options.push({ id: 'remove', color: 'red', name: translate('commonDelete') });
-			} else 
-			if (space.isAccountJoining) {
-				options.push({ id: 'cancel', color: 'red', name: translate('popupSettingsSpacesCancelRequest') });
-			} else {
-				options.push({ id: 'remove', color: 'red', name: isOwner ? translate('commonDelete') : translate('commonLeaveSpace') });
-			};
+		if (options.length) {
+			options.push({ isDiv: true });
+		};
 
-			S.Menu.open('select', {
-				...param,
-				data: {
-					options,
-					onSelect: (e: any, element: any) => {
-						window.setTimeout(() => {
-							switch (element.id) {
-								case 'export': {
-									Action.export(targetSpaceId, [], I.ExportType.Protobuf, { 
-										zip: true, 
-										nested: true, 
-										files: true, 
-										archived: true, 
-										json: false, 
-										route: param.route,
-									});
-									break;
-								};
+		options.push({ id: 'settings', name: translate('popupSettingsSpaceIndexTitle') });
 
-								case 'remove': {
-									Action.removeSpace(targetSpaceId, param.route);
-									break;
-								};
+		S.Menu.open('select', {
+			...param,
+			data: {
+				options,
+				onSelect: (e: any, element: any) => {
+					window.setTimeout(() => {
+						switch (element.id) {
+							case 'mute':
+							case 'unmute': {
+								const mode = element.id == 'mute' ? I.NotificationMode.Mentions : I.NotificationMode.All;
 
-								case 'cancel': {
-									C.SpaceJoinCancel(targetSpaceId, (message: any) => {
-										if (message.error.code) {
-											window.setTimeout(() => {
-												S.Popup.open('confirm', { 
-													data: {
-														title: translate('commonError'),
-														text: message.error.description,
-													}
-												});
-											}, S.Popup.getTimeout());
-										};
-									});
-									break;
-								};
-
-								case 'revoke': {
-									Action.inviteRevoke(targetSpaceId);
-									break;
-								};
-
-								case 'mute':
-								case 'unmute': {
-									const mode = element.id == 'mute' ? I.NotificationMode.Mentions : I.NotificationMode.All;
-
-									C.PushNotificationSetSpaceMode(targetSpaceId, mode);
-									analytics.event('ChangeMessageNotificationState', { type: mode, route: analytics.route.vault });
-									break;
-								};
+								C.PushNotificationSetSpaceMode(targetSpaceId, mode);
+								analytics.event('ChangeMessageNotificationState', { type: mode, route: analytics.route.vault });
+								break;
 							};
 
-						}, S.Menu.getTimeout());
-					},
+							case 'pin': {
+								C.SpaceSetOrder(space.id, [ space.id ]);
+								analytics.event('PinSpace');
+								break;
+							};
+
+							case 'unpin': {
+								C.SpaceUnsetOrder(space.id);
+								analytics.event('UnpinSpace');
+								break;
+							};
+
+							case 'settings': {
+								const routeParam = { 
+									replace: true, 
+									onRouteChange: () => U.Object.openRoute({ id: 'spaceIndex', layout: I.ObjectLayout.Settings }),
+								};
+		
+								U.Router.switchSpace(targetSpaceId, '', false, routeParam, true);
+								break;
+							};
+
+						};
+
+					}, S.Menu.getTimeout());
 				},
-			});
-		};
-
-		if (space.isShared) {
-			U.Space.getInvite(S.Common.space, (newCid: string, newKey: string, inviteType: I.InviteType) => {
-				cid = newCid;
-				key = newKey;
-
-				cb();
-			});
-		} else {
-			cb();
-		};
+			},
+		});
 	};
 
 	inviteContext (param: any) {
-		const { isOnline } = S.Common;
-		const { containerId, cid, key, onInviteRevoke } = param || {};
-		const isOwner = U.Space.isMyOwner();
-		const isLocalNetwork = U.Data.isLocalNetwork();
+		const { containerId, cid, key } = param || {};
 		const options: any[] = [
-			{ id: 'qr', name: translate('popupSettingsSpaceShareShowQR') },
+			{ id: 'qr', name: translate('popupSettingsSpaceShareQRCode') },
 		];
-
-		if (isOnline && isOwner && !isLocalNetwork) {
-			options.push({ id: 'revoke', color: 'red', name: translate('popupSettingsSpaceShareRevokeInvite') });
-		};
 
 		S.Menu.open('select', {
 			element: `#${containerId} #button-more-link`,
@@ -905,12 +868,7 @@ class UtilMenu {
 						case 'qr': {
 							S.Popup.open('inviteQr', { data: { link: U.Space.getInviteLink(cid, key) } });
 							analytics.event('ClickSettingsSpaceShare', { type: 'Qr' });
-							break;
-						};
-
-						case 'revoke': {
-							Action.inviteRevoke(S.Common.space, onInviteRevoke);
-							analytics.event('ClickSettingsSpaceShare', { type: 'Revoke' });
+							analytics.event('ScreenQr', { route: analytics.route.inviteLink });
 							break;
 						};
 					};
@@ -925,32 +883,45 @@ class UtilMenu {
 			return [];
 		};
 
-		const ids = Storage.get('spaceOrder') || [];
 		const items = U.Common.objectCopy(U.Space.getList()).
 			concat({ id: 'gallery', name: translate('commonGallery'), isButton: true }).
 			map(it => {
 				it.counter = 0;
+				it.lastMessageDate = 0;
+
 				if (!it.isButton) {
 					const counters = S.Chat.getSpaceCounters(it.targetSpaceId);
+
 					it.counter = counters.mentionCounter || counters.messageCounter;
+					it.lastMessageDate = S.Chat.getSpaceLastMessageDate(it.targetSpaceId);
+					it.isPinned = !!it.spaceOrder;
 				};
 				return it;
 			});
 
-		if (ids && (ids.length > 0)) {
-			items.sort((c1, c2) => {
-				const i1 = ids.indexOf(c1.id);
-				const i2 = ids.indexOf(c2.id);
+		items.sort((c1, c2) => {
+			if (c1.isButton && !c2.isButton) return 1;
+			if (!c1.isButton && c2.isButton) return -1;
 
-				if (c1.counter && !c2.counter) return -1;
-				if (!c1.counter && c2.counter) return 1;
-				if (c1.lastMessageDate > c2.lastMessageDate) return -1;
-				if (c1.lastMessageDate < c2.lastMessageDate) return 1;
-				if (i1 > i2) return 1;
-				if (i1 < i2) return -1;
-				return 0;
-			});
-		};
+			if (c1.isPinned && !c2.isPinned) return -1;
+			if (!c1.isPinned && c2.isPinned) return 1;
+
+			if (c1.tmpOrder > c2.tmpOrder) return 1;
+			if (c1.tmpOrder < c2.tmpOrder) return -1;
+
+			if (c1.spaceOrder > c2.spaceOrder) return 1;
+			if (c1.spaceOrder < c2.spaceOrder) return -1;
+
+			const d1 = c1.lastMessageDate || c1.spaceJoinDate;
+			const d2 = c2.lastMessageDate || c2.spaceJoinDate;
+
+			if (d1 > d2) return -1;
+			if (d1 < d2) return 1;
+
+			if (c1.creationDate > c2.creationDate) return -1;
+			if (c1.creationDate < c2.creationDate) return 1;
+			return 0;
+		});
 
 		return items;
 	};
@@ -968,15 +939,13 @@ class UtilMenu {
 		].filter(it => it).map(it => ({ ...it, isSystem: true }));
 	};
 
-	sortOrFilterRelationSelect (menuParam: any, param: any) {
+	sortOrFilterRelationSelect (menuParam: Partial<I.MenuParam>, param: any) {
 		const { rootId, blockId, getView, onSelect } = param;
 		const options = Relation.getFilterOptions(rootId, blockId, getView());
 
-		let menuContext = null;
-
 		const callBack = (item: any) => {
 			onSelect(item);
-			menuContext?.close();
+			this.menuContext?.close();
 		};
 
 		if (S.Menu.isOpen('select')) {
@@ -984,7 +953,7 @@ class UtilMenu {
 		};
 
 		const onOpen = context => {
-			menuContext = context;
+			this.setContext(context);
 
 			if (menuParam.onOpen) {
 				menuParam.onOpen(context);
@@ -1008,7 +977,7 @@ class UtilMenu {
 				withAdd: true,
 				onSelect: (e: any, item: any) => {
 					if (item.id == 'add') {
-						this.sortOrFilterRelationAdd(menuContext, param, relation => callBack(relation));
+						this.sortOrFilterRelationAdd(this.menuContext, param, menuParam, relation => callBack(relation));
 					} else {
 						callBack(item);
 					};
@@ -1017,7 +986,7 @@ class UtilMenu {
 		});
 	};
 
-	sortOrFilterRelationAdd (context: any, param: any, callBack: (relation: any) => void) {
+	sortOrFilterRelationAdd (context: any, param: any, menuParam: Partial<I.MenuParam>, callBack: (relation: any) => void) {
 		if (!context) {
 			return;
 		};
@@ -1027,6 +996,7 @@ class UtilMenu {
 		const element = `#${context.getId()} #item-add`;
 
 		S.Menu.open('relationSuggest', {
+			...menuParam,
 			element,
 			offsetX: context.getSize().width,
 			horizontal: I.MenuDirection.Right,
@@ -1223,10 +1193,10 @@ class UtilMenu {
 	};
 
 	typeSuggest (param: Partial<I.MenuParam>, details: any, flags: { selectTemplate?: boolean, deleteEmpty?: boolean, withImport?: boolean }, route: string, callBack?: (item: any) => void) {
+		param = param || {};
+		param.data = param.data || {};
 		details = details || {};
 		flags = flags || {};
-
-		let menuContext = null;
 
 		const objectFlags: I.ObjectFlag[] = [];
 
@@ -1362,12 +1332,11 @@ class UtilMenu {
 			});
 		};
 
-		const buttons: any[] = [
-			flags.withImport ? { id: 'import', icon: 'import', name: translate('commonImport'), onClick: onImport, isButton: true } : null,
-		].filter(it => it);
-
 		const check = async () => {
 			const items = await getClipboardData();
+			const buttons: any[] = [
+				flags.withImport ? { id: 'import', icon: 'import', name: translate('commonImport'), onClick: onImport, isButton: true } : null,
+			].filter(it => it);
 
 			if (items.length) {
 				buttons.unshift({ id: 'clipboard', icon: 'clipboard', name: translate('widgetItemClipboard'), onClick: onPaste });
@@ -1375,14 +1344,24 @@ class UtilMenu {
 
 			buttons.unshift({ 
 				id: 'add', icon: 'plus', onClick: () => {
-					U.Object.createType({ name: menuContext.ref.getData().filter }, keyboard.isPopup());
-					menuContext.close();
+					U.Object.createType({ name: this.menuContext?.ref?.getData().filter }, keyboard.isPopup());
+					this.menuContext?.close();
+
+					if (param.data.onAdd) {
+						param.data.onAdd();
+					};
 				}, 
 			});
 
 			S.Menu.open('typeSuggest', {
 				...param,
-				onOpen: context => menuContext = context,
+				onOpen: context => {
+					this.setContext(context);
+
+					if (param.onOpen) {
+						param.onOpen(context);
+					};
+				},
 				data: {
 					noStore: true,
 					canAdd: true,
@@ -1402,16 +1381,19 @@ class UtilMenu {
 							analytics.event('SelectObjectType', { objectType: object.type });
 							analytics.createObject(object.type, object.layout, route, time);
 
-							menuContext.close();
+							this.menuContext?.close();
 						};
 
 						if (U.Object.isBookmarkLayout(item.recommendedLayout)) {
-							menuContext.close(() => {
+							this.menuContext?.close();
+
+							window.setTimeout(() => {
 								this.onBookmarkMenu({
 									...param,
 									element: `#widget-space-arrow`,
+									data: { details },
 								}, object => cb(object, 0));
-							});
+							}, S.Menu.getTimeout());
 						} else {
 							C.ObjectCreate(details, objectFlags, item.defaultTemplateId, item.uniqueKey, S.Common.space, (message: any) => {
 								if (!message.error.code) {
@@ -1442,6 +1424,10 @@ class UtilMenu {
 			},
 			...param,
 		});
+	};
+
+	setContext (context: any) {
+		this.menuContext = context;
 	};
 
 };

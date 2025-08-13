@@ -160,10 +160,12 @@ export default {
 		'targetSpaceId',
 		'creator',
 		'createdDate',
-		'lastMessageDate',
 		'chatId',
 		'spaceUxType',
 		'spacePushNotificationMode',
+		'spaceOrder',
+		'tmpOrder',
+		'spaceJoinDate',
 	],
 
 	participant: [
@@ -176,7 +178,7 @@ export default {
 	syncStatus: [
 		'syncStatus',
 		'syncDate',
-		'syncError'
+		'syncError',
 	],
 
 	pageCover: 'pageCover',

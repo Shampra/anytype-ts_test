@@ -232,7 +232,6 @@ class UtilData {
 		param = param || {};
 		param.routeParam = param.routeParam || {};
 
-		const { pin } = S.Common;
 		const { root, widgets } = S.Block;
 		const { redirect, space } = S.Common;
 		const routeParam = Object.assign({ replace: true }, param.routeParam);
@@ -242,8 +241,6 @@ class UtilData {
 			console.error('[U.Data].onAuth No widgets defined');
 			return;
 		};
-
-		keyboard.initPinCheck();
 
 		C.ObjectOpen(root, '', space, (message: any) => {
 			if (!U.Common.checkErrorOnOpen(root, message.error.code, null)) {
@@ -256,22 +253,28 @@ class UtilData {
 				};
 
 				U.Subscription.createSpace(() => {
-					// Redirect
-					if (pin && !keyboard.isPinChecked) {
-						U.Router.go('/auth/pin-check', routeParam);
-					} else {
-						if (route) {
-							U.Router.go(route, routeParam);
+					S.Common.pinInit(() => {
+						keyboard.initPinCheck();
+
+						const { pin } = S.Common;
+
+						// Redirect
+						if (pin && !keyboard.isPinChecked) {
+							U.Router.go('/auth/pin-check', routeParam);
 						} else {
-							U.Space.openDashboard(routeParam);
+							if (route) {
+								U.Router.go(route, routeParam);
+							} else {
+								U.Space.openDashboard(routeParam);
+							};
 						};
-					};
 
-					S.Common.redirectSet('');
+						S.Common.redirectSet('');
 
-					if (callBack) {
-						callBack();
-					};
+						if (callBack) {
+							callBack();
+						};
+					});
 				});
 			});
 		});
@@ -296,7 +299,10 @@ class UtilData {
 
 		C.ChatSubscribeToMessagePreviews(J.Constant.subId.chatSpace, (message: any) => {
 			for (const item of message.previews) {
-				S.Chat.setState(S.Chat.getSubId(item.spaceId, item.chatId), item.state);
+				S.Chat.setState(S.Chat.getSubId(item.spaceId, item.chatId), { 
+					...item.state, 
+					lastMessageDate: Number(item.message?.createdAt || 0),
+				});
 			};
 		});
 
@@ -924,8 +930,10 @@ class UtilData {
 
 						S.Auth.accountSet(message.account);
 						S.Common.configSet(message.account.config, false);
+						U.Subscription.createGlobal();
 
 						this.onInfo(message.account.info);
+
 						Renderer.send('keytarSet', message.account.id, phrase);
 						Action.importUsecase(S.Common.space, I.Usecase.GetStarted, (message: any) => {
 							if (message.startingId) {

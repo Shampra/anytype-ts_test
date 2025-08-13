@@ -1,8 +1,8 @@
 import * as React from 'react';
 import raf from 'raf';
 import { observer } from 'mobx-react';
-import { Button, Icon, Widget, DropTarget, ShareBanner, ProgressText } from 'Component';
-import { I, C, M, S, U, J, keyboard, analytics, translate } from 'Lib';
+import { Button, Icon, Widget, DropTarget, ShareBanner, ProgressText, Label } from 'Component';
+import { I, C, M, S, U, J, keyboard, analytics, translate, scrollOnMove } from 'Lib';
 
 type State = {
 	isEditing: boolean;
@@ -29,6 +29,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		this.onEdit = this.onEdit.bind(this);
 		this.onDragStart = this.onDragStart.bind(this);
 		this.onDragOver = this.onDragOver.bind(this);
+		this.onDrag = this.onDrag.bind(this);
 		this.onDrop = this.onDrop.bind(this);
 		this.onArchive = this.onArchive.bind(this);
 		this.onAdd = this.onAdd.bind(this);
@@ -140,7 +141,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 			};
 
 			content = (
-				<>
+				<div className="content">
 					{space && !space._empty_ ? (
 						<>
 							{hasShareBanner ? <ShareBanner onClose={() => this.forceUpdate()} /> : ''}
@@ -160,6 +161,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 									disableContextMenu={true} 
 									onDragStart={this.onDragStart}
 									onDragOver={this.onDragOver}
+									onDrag={this.onDrag}
 									isEditing={isEditing}
 									canEdit={false}
 									canRemove={false}
@@ -186,37 +188,45 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 								canRemove={canEdit}
 								onDragStart={this.onDragStart}
 								onDragOver={this.onDragOver}
+								onDrag={this.onDrag}
 								setPreview={this.setPreview}
 								setEditing={this.setEditing}
 							/>
 						);
 					})}
-				</>
+				</div>
 			);
 
 			bottom = (
 				<div className="bottom">
 					<div className="grad" />
 
-					<div className="side left">
-						<Icon className="settings withBackground" tooltipParam={{ text: translate('sidebarEdit') }} onClick={this.onEdit} />
-					</div>
+					<div className="sides">
+						<div className="side left">
 
-					<div className="side center">
-						{!isEditing ? (
-							<Button id="widget-list-add" text={translate('menuWidgetAddWidget')} color="simple" onClick={this.onAdd} />
-						) : (
-							<Button color="simple" text={translate('commonDone')} onClick={this.onEdit} />
-						)}
-					</div>
+							<div className={[ 'settings', (isEditing ? 'isEditing' : '') ].join(' ')} onClick={this.onEdit}>
+								<Icon tooltipParam={{ text: translate('sidebarEdit') }} />
+								<Label text={translate('commonDone')} />
+							</div>
+						</div>
 
-					<div className="side right">
-						<Icon 
-							id="button-widget-help" 
-							className="help withBackground" 
-							tooltipParam={{ text: translate('commonHelp') }} 
-							onClick={this.onHelp} 
-						/>
+						<div className="side center">
+							<Button 
+								id="widget-list-add"
+								text={translate('menuWidgetAddWidget')}
+								onClick={this.onAdd}
+							/>
+						</div>
+
+						<div className="side right">
+							<Button 
+								id="button-widget-help"
+								className="help"
+								text="?"
+								tooltipParam={{ text: translate('commonHelp') }}
+								onClick={this.onHelp}
+							/>
+						</div>
 					</div>
 				</div>
 			);
@@ -226,7 +236,6 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 			<div 
 				id="containerWidget"
 				ref={node => this.node = node}
-				className="customScrollbar"
 			>
 				<div id="head" className="head">
 					<ProgressText label={translate('progressUpdateDownloading')} type={I.ProgressType.Update} />
@@ -258,6 +267,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 			classNameWrap: 'fromSidebar',
 			vertical: I.MenuDirection.Top,
 			offsetY: -78,
+			subIds: J.Menu.help,
 		});
 	};
 
@@ -272,6 +282,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 
 		analytics.event('ClickAddWidget', { route });
 
+		const { isEditing } = this.state;
 		const { widgets } = S.Block;
 		const space = U.Space.getSpaceview();
 		const blocks = S.Block.getChildren(widgets, widgets, (block: I.Block) => block.isWidget());
@@ -281,6 +292,10 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		const button = node.find('#widget-list-add');
 		const { top } = button.offset();
 		const position = top + 350 > nh ? I.MenuDirection.Top : I.MenuDirection.Bottom;
+
+		if (isEditing) {
+			this.onEdit(e);
+		};
 
 		blocks.forEach(block => {
 			const children = S.Block.getChildren(widgets, block.id);
@@ -367,13 +382,26 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 						offsetX: menuContext.getSize().width,
 						vertical: I.MenuDirection.Center,
 						isSub: true,
-					}, { name: context.filter }, {}, analytics.route.addWidget, object => onSelect(object, true));
+						data: {
+							onAdd: () => menuContext?.close(),
+						},
+					}, { name: context.filter }, {}, analytics.route.addWidget, object => {
+						onSelect(object, true);
+						menuContext?.close();
+					});
 				},
 				dataChange: (context: any, items: any[]) => {
 					const skipLayouts = U.Object.getSystemLayouts().concat(I.ObjectLayout.Type);
 					const reg = new RegExp(U.Common.regexEscape(context.filter), 'gi');
 					const types = S.Record.checkHiddenObjects(S.Record.getTypes()).
-						filter(it => !targets.includes(it.id) && !skipLayouts.includes(it.recommendedLayout) && !U.Object.isTemplateType(it.id) && (it.name.match(reg) || it.pluralName.match(reg))).
+						filter(it => {
+							const name = String(it.name || it.pluralName || '');
+
+							return !targets.includes(it.id) && 
+								!skipLayouts.includes(it.recommendedLayout) && 
+								!U.Object.isTemplateType(it.id) && 
+								name.match(reg);
+						}).
 						map(it => ({ ...it, caption: '' }));
 					const lists = [];
 
@@ -447,6 +475,7 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		clone.append(obj.find('.head').clone());
 		node.append(clone);
 		selection?.clear();
+		$('body').addClass('isDragging');
 
 		keyboard.disableCommonDrop(true);
 		keyboard.disableSelection(true);
@@ -458,9 +487,15 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		e.dataTransfer.setData('text', blockId);
 
 		win.off('dragend.widget').on('dragend.widget', () => {
-			this.clear();
+			this.onDragEnd();
 			win.off('dragend.widget');
 		});
+
+		scrollOnMove.onMouseDown(e, { isWindow: false, container: node.find('#body') });
+	};
+
+	onDrag (e: React.DragEvent, blockId: string): void {
+		scrollOnMove.onMouseMove(e.clientX, e.clientY);	
 	};
 
 	onDragOver (e: React.DragEvent, blockId: string) {
@@ -512,12 +547,18 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 			C.BlockListMoveToExistingObject(widgets, widgets, this.dropTargetId, [ blockId ], this.position);
 		};
 
+		this.onDragEnd();
+	};
+
+	onDragEnd () {
 		keyboard.disableCommonDrop(false);
 		keyboard.disableSelection(false);
 		keyboard.setDragging(false);
 
 		this.isDragging = false;
 		this.clear();
+
+		$('body').removeClass('isDragging');
 	};
 
 	onScroll () {

@@ -29,10 +29,6 @@ const history = memoryHistory();
 const electron = U.Common.getElectron();
 const isPackaged = electron.isPackaged;
 
-interface State {
-	isLoading: boolean;
-};
-
 declare global {
 	interface Window {
 		isExtension: boolean;
@@ -64,6 +60,7 @@ if (!isPackaged) {
 			S,
 			U,
 			M,
+			J,
 			analytics,
 			dispatcher,
 			keyboard,
@@ -166,14 +163,13 @@ const App: FC = () => {
 		Renderer.on('init', onInit);
 		Renderer.on('route', (e: any, route: string) => onRoute(route));
 		Renderer.on('popup', onPopup);
-		Renderer.on('checking-for-update', onUpdateCheck);
-		Renderer.on('update-available', onUpdateAvailable);
-		Renderer.on('update-confirm', onUpdateConfirm);
 		Renderer.on('update-not-available', onUpdateUnavailable);
-		Renderer.on('update-downloaded', () => S.Progress.delete('update'));
+		Renderer.on('update-downloaded', onUpdateDownloaded);
 		Renderer.on('update-error', onUpdateError);
 		Renderer.on('download-progress', onUpdateProgress);
 		Renderer.on('spellcheck', onSpellcheck);
+		Renderer.on('pin-set', () => S.Common.pinInit());
+		Renderer.on('pin-remove', () => S.Common.pinInit());
 		Renderer.on('enter-full-screen', () => S.Common.fullscreenSet(true));
 		Renderer.on('leave-full-screen', () => S.Common.fullscreenSet(false));
 		Renderer.on('config', (e: any, config: any) => S.Common.configSet(config, true));
@@ -212,7 +208,7 @@ const App: FC = () => {
 	};
 
 	const onInit = (e: any, data: any) => {
-		const { dataPath, config, isDark, isChild, languages, isPinChecked, css, token } = data;
+		const { id, dataPath, config, isDark, isChild, languages, isPinChecked, css, token } = data;
 		const win = $(window);
 		const body = $('body');
 		const node = $(nodeRef.current);
@@ -220,8 +216,6 @@ const App: FC = () => {
 		const anim = loader.find('.anim');
 		const accountId = Storage.get('accountId');
 		const redirect = Storage.get('redirect');
-		const color = Storage.get('color');
-		const bgColor = Storage.get('bgColor');
 		const route = String(data.route || redirect || '');
 
 		S.Common.configSet(config, true);
@@ -229,15 +223,9 @@ const App: FC = () => {
 		S.Common.themeSet(config.theme);
 		S.Common.languagesSet(languages);
 		S.Common.dataPathSet(dataPath);
+		S.Common.windowIdSet(id);
 
 		Action.checkDefaultSpellingLang();
-
-		if (!color) {
-			Storage.set('color', 'orange');
-		};
-		if (!bgColor) {
-			Storage.set('bgColor', 'orange');
-		};
 
 		analytics.init();
 
@@ -346,83 +334,13 @@ const App: FC = () => {
 		window.setTimeout(() => S.Popup.open(id, param), S.Popup.getTimeout());
 	};
 
-	const onUpdateCheck = (e: any, auto: boolean) => {
-		if (!auto) {
-			S.Progress.add({ id: I.ProgressType.UpdateCheck, type: I.ProgressType.UpdateCheck, current: 0, total: 1 });
-		};
-	};
-
-	const onUpdateConfirm = (e: any, auto: boolean, info: any) => {
-		S.Progress.delete(I.ProgressType.UpdateCheck);
-
-		if (auto) {
-			return;
-		};
-
-		console.log('[App.onUpdateConfirm]', info);
-
-		const title = [ translate('popupConfirmUpdatePromptTitle') ];
-		const version = info?.releaseName;
-
-		if (version) {
-			title.push(version);
-		};
-
-		S.Popup.open('confirm', {
-			data: {
-				icon: 'update',
-				title: title.join(' - '),
-				text: translate('popupConfirmUpdatePromptText'),
-				textConfirm: translate('popupConfirmUpdatePromptRestartOk'),
-				textCancel: translate('popupConfirmUpdatePromptCancel'),
-				onConfirm: () => {
-					Renderer.send('updateConfirm');
-					checkUpdateVersion(version);
-				},
-				onCancel: () => {
-					Renderer.send('updateCancel');
-				},
-			},
-		});
-	};
-
-	const onUpdateAvailable = (e: any, auto: boolean, info: any) => {
-		S.Progress.delete(I.ProgressType.UpdateCheck);
-
-		if (auto) {
-			return;
-		};
-
-		console.log('[App.onUpdateAvailable]', info);
-
-		const title = [ translate('popupConfirmUpdatePromptTitle') ];
-		const version = info?.version;
-
-		if (version) {
-			title.push(version);
-		};
-
-		S.Popup.open('confirm', {
-			data: {
-				icon: 'update',
-				title: title.join(' - '),
-				text: translate('popupConfirmUpdatePromptText'),
-				textConfirm: translate('commonUpdateNow'),
-				textCancel: translate('popupConfirmUpdatePromptCancel'),
-				onConfirm: () => {
-					Renderer.send('updateDownload');
-					checkUpdateVersion(version);
-				},
-				onCancel: () => {
-					Renderer.send('updateCancel');
-				},
-			},
-		});
+	const onUpdateDownloaded = (e: any, info: any) => {
+		console.log('[App.onUpdateDownloaded]', info);
+		S.Common.updateVersionSet(info?.version);
+		S.Progress.delete(I.ProgressType.Update);
 	};
 
 	const onUpdateUnavailable = (e: any, auto: boolean) => {
-		S.Progress.delete(I.ProgressType.UpdateCheck);
-
 		if (auto) {
 			return;
 		};
@@ -441,7 +359,8 @@ const App: FC = () => {
 
 	const onUpdateError = (e: any, err: string, auto: boolean) => {
 		console.error(err);
-		S.Progress.delete(I.ProgressType.UpdateCheck);
+		S.Common.updateVersionSet('');
+		S.Progress.delete(I.ProgressType.Update);
 
 		if (auto) {
 			return;
@@ -471,22 +390,6 @@ const App: FC = () => {
 			current: progress.transferred, 
 			total: progress.total,
 		});
-	};
-
-	const checkUpdateVersion = (v: string) => {
-		if (!Storage.get('primitivesOnboarding')) {
-			return;
-		};
-
-		v = String(v || '');
-
-		const update = v.split('.');
-		const current = String(electron.version.app || '').split('.');
-
-		if ((update[0] != current[0]) || (update[1] != current[1])) {
-			Storage.set('whatsNew', true);
-			Storage.setHighlight('whatsNew', true);
-		};
 	};
 
 	const onRoute = (route: string) => {

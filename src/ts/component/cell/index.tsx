@@ -54,6 +54,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 		const placeholder = getPlaceholder(relation, record);
 		const check = checkValue();
 		const isGrid = viewType == I.ViewType.Grid;
+		const isName = relationKey == 'name';
 
 		if (!canEdit) {
 			if (check && (relation.format != I.RelationType.Checkbox)) {
@@ -75,6 +76,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 		const win = $(window);
 		const cell = $(`#${cellId}`);
 		const className = [];
+		const cellContent = cell.hasClass('cellContent') ? cell : cell.find('.cellContent');
 
 		if (menuClassName) {
 			className.push(menuClassName);
@@ -101,9 +103,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 				return;
 			};
 
-			const cellContent = cell.hasClass('cellContent') ? cell : cell.find('.cellContent');
-
-			if (relation.relationKey == 'name') {
+			if (!isGrid && isName) {
 				cellContent.css({ height: cellContent.outerHeight() });
 			};
 
@@ -143,6 +143,10 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 				if (childRef.current.setEditing) {
 					childRef.current.setEditing(false);
 				};
+			};
+
+			if (!isGrid && isName) {
+				cellContent.css({ height: '' });
 			};
 
 			$(`#${cellId}`).removeClass('isEditing');
@@ -271,6 +275,23 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 				break;
 			};
 
+			case I.RelationType.Number: {
+				if (!noInplace) {
+					break;
+				};
+
+				param = Object.assign(param, {
+					width: 288,
+				});
+				param.data = Object.assign(param.data, {
+					noResize: true,
+				});
+
+				menuId = 'dataviewText';
+				closeIfOpen = false;
+				break;
+			};
+
 			case I.RelationType.LongText: {
 				if (!noInplace) {
 					const wh = win.height();
@@ -284,7 +305,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 						element: cell,
 						offsetY: -height,
 						width,
-						height: height,
+						height,
 					});
 				} else {
 					param = Object.assign(param, {
@@ -364,7 +385,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 							};
 
 							case 'reload': {
-								C.ObjectBookmarkFetch(record.id, value, () => analytics.event('ReloadSourceData'));
+								C.ObjectBookmarkFetch(record.id, value.trim(), () => analytics.event('ReloadSourceData'));
 								break;
 							};
 						};

@@ -658,6 +658,7 @@ export const Mapper = {
 				reactions: Mapper.From.ChatMessageReaction(obj.getReactions()),
 				isReadMessage: obj.getRead(),
 				isReadMention: obj.getMentionread(),
+				isSynced: obj.getSynced(),
 			};
 		},
 
@@ -667,6 +668,7 @@ export const Mapper = {
 				mentions: Mapper.From.ChatStateUnreadMessages(obj.getMentions()),
 				lastStateId: obj.getLaststateid(),
 				order: obj.getOrder(),
+				lastMessageDate: 0,
 			};
 		},
 
@@ -702,7 +704,7 @@ export const Mapper = {
 			};
 		},
 
-		ChatMessageReaction (obj: Model.ChatMessage.Reactions) {
+		ChatMessageReaction (obj: Model.ChatMessage.Reactions): I.ChatMessageReaction[] {
 			const reactions = [];
 
 			obj.getReactionsMap().forEach((identityList, emoji) => {
@@ -1226,6 +1228,7 @@ export const Mapper = {
 			if (v == V.CHATSTATEUPDATE)			 	 t = 'ChatStateUpdate';
 			if (v == V.CHATUPDATEMESSAGEREADSTATUS)	 t = 'ChatUpdateMessageReadStatus';
 			if (v == V.CHATUPDATEMENTIONREADSTATUS)	 t = 'ChatUpdateMentionReadStatus';
+			if (v == V.CHATUPDATEMESSAGESYNCSTATUS)	 t = 'ChatUpdateMessageSyncStatus';
 
 			if (v == V.SPACEAUTOWIDGETADDED)		 t = 'SpaceAutoWidgetAdded';
 
@@ -1683,7 +1686,8 @@ export const Mapper = {
 				error: obj.getError(),
 				network: obj.getNetwork(),
 				status: obj.getStatus(),
-				syncingCounter: obj.getSyncingobjectscounter()
+				syncingCounter: obj.getSyncingobjectscounter(),
+				notSyncedCounter: obj.getNotsyncedfilescounter()
 			};
 		},
 
@@ -1755,6 +1759,14 @@ export const Mapper = {
 			return {
 				ids: obj.getIdsList(),
 				isRead: obj.getIsread(),
+				subIds: obj.getSubidsList(),
+			};
+		},
+
+		ChatUpdateMessageSyncStatus: (obj: Events.Event.Chat.UpdateMessageSyncStatus) => {
+			return {
+				ids: obj.getIdsList(),
+				isSynced: obj.getIssynced(),
 				subIds: obj.getSubidsList(),
 			};
 		},

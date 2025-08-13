@@ -1,7 +1,7 @@
 import * as React from 'react';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
-import { observable } from 'mobx';
+import { observable, trace } from 'mobx';
 import { ObjectType, Cell, Block } from 'Component';
 import { I, C, S, U, J, M, Preview, focus, analytics, Relation, Onboarding, history as historyPopup, keyboard, translate } from 'Lib';
 
@@ -41,6 +41,8 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 	};
 
 	render () {
+		trace();
+
 		const { rootId, block, size, iconSize, isPopup, readonly } = this.props;
 		const allowedValue = S.Block.checkFlags(rootId, rootId, [ I.RestrictionObject.Details ]);
 		const items = this.getItems();
@@ -62,6 +64,11 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 							const id = Relation.cellId(PREFIX, relation.relationKey, object.id);
 							const value = object[relation.relationKey];
 							const canEdit = !readonly && allowedValue && !relation.isReadonlyValue;
+							const passParam: any = {};
+
+							if (relation.relationKey == 'type') {
+								passParam.onCellClick = this.onType;
+							};
 
 							return (
 								<span id={id} key={relation.id}>
@@ -72,7 +79,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 										readonly={!canEdit}
 										isSelectionDisabled={true}
 										isContextMenuDisabled={true}
-										passParam={{ onCellClick: this.onType }}
+										passParam={passParam}
 									/>
 								</span>
 							);
@@ -136,6 +143,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 										withName={true}
 										noInplace={true}
 										onCellChange={this.onCellChange}
+										menuClassNameWrap="fromBlock"
 									/>
 									<div className="bullet" />
 								</span>
@@ -341,7 +349,9 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 	};
 
 	getObject () {
-		return S.Detail.get(this.props.rootId, this.getStoreId(), this.getItems().map(it => it.relationKey));
+		const keys = [ 'type', 'setOf', 'featuredRelations', 'layout' ].concat(this.getItems().map(it => it.relationKey));
+
+		return S.Detail.get(this.props.rootId, this.getStoreId(), keys, true);
 	};
 
 	checkType () {
@@ -453,6 +463,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 
 		S.Menu.open('select', {
 			element: element.join(' '),
+			classNameWrap: 'fromBlock',
 			offsetY: 4,
 			subIds: J.Menu.featuredType,
 			onOpen: context => this.menuContext = context,
@@ -479,6 +490,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		const menuParam = {
 			menuId: item.id,
 			element: `#${this.menuContext.getId()} #item-${item.id}`,
+			classNameWrap: 'fromBlock',
 			offsetX: this.menuContext.getSize().width,
 			vertical: I.MenuDirection.Center,
 			isSub: true,
@@ -631,6 +643,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 		S.Menu.closeAll(null, () => {
 			S.Menu.open('dataviewSource', {
 				element: `#block-${block.id} #${Relation.cellId(PREFIX, 'setOf', rootId)}`,
+				classNameWrap: 'fromBlock',
 				noFlipX: true,
 				offsetY: 4,
 				data: {
@@ -725,6 +738,7 @@ const BlockFeatured = observer(class BlockFeatured extends React.Component<Props
 			S.Menu.open('select', {
 				element: elementId,
 				className: 'featuredLinks',
+				classNameWrap: 'fromBlock',
 				title: relation.name,
 				width: 360,
 				offsetY: 4,

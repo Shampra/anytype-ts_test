@@ -439,6 +439,8 @@ class DetailStore {
 		object.targetSpaceId = Relation.getStringValue(object.targetSpaceId);
 		object.iconOption = Number(object.iconOption) || 1;
 		object.notificationMode = Number(object.notificationMode || object.spacePushNotificationMode) || I.NotificationMode.All;
+		object.spaceOrder = Relation.getStringValue(object.spaceOrder);
+		object.spaceJoinDate = Number(object.spaceJoinDate) || 0;
 
 		if (object.iconOption > 10) {
 			object.iconOption = object.iconOption - 10;
@@ -482,6 +484,22 @@ class DetailStore {
 	 */
 	private mapFile (object) {
 		object.sizeInBytes = Number(object.sizeInBytes) || 0;
+		return object;
+	};
+
+	/**
+	 * Maps bookmark-specific properties for an object.
+	 * @private
+	 * @param {any} object - The object to map.
+	 * @returns {any} The mapped object.
+	 */
+	private mapBookmark (object) {
+		object.source = Relation.getStringValue(object.source);
+
+		if (object.source && (!object.name || (object.name == translate('defaultNamePage')))) {
+			object.name = U.Common.shortUrl(object.source);
+		};
+
 		return object;
 	};
 

@@ -297,6 +297,9 @@ class Relation {
 					I.FilterQuickOption.LastMonth,
 					I.FilterQuickOption.CurrentMonth,
 					I.FilterQuickOption.NextMonth,
+					I.FilterQuickOption.LastYear,
+					I.FilterQuickOption.CurrentYear,
+					I.FilterQuickOption.NextYear,
 				];
 
 				switch (condition) {
@@ -412,7 +415,7 @@ class Relation {
 		let ret = false;
 		switch (relation.format) {
 			default: {
-				ret = value ? true : false;
+				ret = !!value;
 				break;
 			};
 
@@ -421,12 +424,16 @@ class Relation {
 				break;
 			};
 
-			case I.RelationType.Select:
+			case I.RelationType.Select: {
+				ret = Array.isArray(value) ? !!value[0] : !!value.length;
+				break;
+			};
+
 			case I.RelationType.File:
 			case I.RelationType.MultiSelect:
 			case I.RelationType.Object:
 			case I.RelationType.Relations: {
-				ret = value.length ? true : false;
+				ret = !!value.length;
 				break;
 			};
 		};
@@ -538,14 +545,24 @@ class Relation {
 			return !it.isHidden && formats.includes(it.format);
 		}).map(it => ({
 			id: it.relationKey, 
-			icon: 'relation ' + this.className(it.format),
+			icon: `relation ${this.className(it.format)}`,
 			name: it.name, 
 		}));
 
-		return [
+		const ret = [
 			{ id: '', icon: '', name: translate('commonNone') },
 			{ id: J.Relation.pageCover, icon: 'image', name: translate('libRelationPageCover') },
-		].concat(options);
+		];
+
+		if (!options.find(it => it.id == 'picture')) {
+			ret.push({ 
+				id: 'picture', 
+				icon: `relation ${this.className(I.RelationType.File)}`,
+				name: translate('libRelationPicture'),
+			});
+		};
+
+		return ret.concat(options);
 	};
 
 	/**

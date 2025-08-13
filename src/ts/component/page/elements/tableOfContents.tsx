@@ -12,7 +12,7 @@ const TableOfContents = observer(forwardRef<TableOfContentsRefProps, I.BlockComp
 
 	const { rootId, isPopup } = props;
 	const nodeRef = useRef(null);
-	const tree = S.Block.getTableOfContents(rootId, true);
+	const tree = S.Block.getTableOfContents(rootId, true).slice(0, J.Constant.limit.tableOfContents);
 	const blockRef = useRef('');
 
 	const rebind = () => {
@@ -42,6 +42,10 @@ const TableOfContents = observer(forwardRef<TableOfContentsRefProps, I.BlockComp
 	};
 
 	const onMouseEnter = () => {
+		if (S.Menu.isAnimating('tableOfContents')) {
+			return;
+		};
+
 		const node = $(nodeRef.current);
 
 		S.Menu.open('tableOfContents', {

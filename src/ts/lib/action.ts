@@ -918,16 +918,37 @@ class Action {
 		});
 	};
 
+	membershipUpgrade () {
+		if (!U.Common.checkCanMembershipUpgrade()) {
+			this.membershipUpgradeViaEmail();
+			return;
+		};
+
+		const { membership } = S.Auth;
+		const isBuilder = membership.tier == I.TierType.Builder;
+
+		U.Object.openRoute(
+			{ id: 'membership', layout: I.ObjectLayout.Settings },
+			{
+				onRouteChange: () => {
+					S.Popup.open('membership', {
+						data: { tier: isBuilder ? I.TierType.CoCreator : I.TierType.Builder }
+					});
+				}
+			},
+		);
+	};
+
 	/**
 	 * Opens a membership upgrade confirmation popup.
 	 */
-	membershipUpgrade () {
+	membershipUpgradeViaEmail () {
 		S.Popup.open('confirm', {
 			data: {
 				title: translate('popupConfirmMembershipUpgradeTitle'),
 				text: translate('popupConfirmMembershipUpgradeText'),
 				textConfirm: translate('popupConfirmMembershipUpgradeButton'),
-				onConfirm: () => keyboard.onMembershipUpgrade(),
+				onConfirm: () => keyboard.onMembershipUpgradeViaEmail(),
 				canCancel: false
 			}
 		});
@@ -1110,6 +1131,34 @@ class Action {
 				callBack();
 			};
 		});
+	};
+
+	spaceInfo () {
+		const { account } = S.Auth;
+		const space = U.Space.getSpaceview();
+		const creator = U.Space.getCreator(space.targetSpaceId, space.creator);
+		const data = [
+			[ translate(`popupSettingsSpaceIndexSpaceIdTitle`), space.targetSpaceId ],
+			[ translate(`popupSettingsSpaceIndexCreatedByTitle`), creator.globalName || creator.identity ],
+			[ translate(`popupSettingsSpaceIndexNetworkIdTitle`), account.info.networkId ],
+			[ translate(`popupSettingsSpaceIndexCreationDateTitle`), U.Date.dateWithFormat(S.Common.dateFormat, space.createdDate) ],
+		];
+
+		S.Popup.open('confirm', {
+			className: 'isWide spaceInfo',
+			data: {
+				title: translate('popupSettingsSpaceIndexSpaceInfoTitle'),
+				text: data.map(it => `<dl><dt>${it[0]}:</dt><dd>${it[1]}</dd></dl>`).join(''),
+				textConfirm: translate('commonCopy'),
+				colorConfirm: 'blank',
+				canCancel: false,
+				onConfirm: () => {
+					U.Common.copyToast(translate('libKeyboardTechInformation'), data.map(it => `${it[0]}: ${it[1]}`).join('\n'));
+				},
+			}
+		});
+
+		analytics.event('ScreenSpaceInfo');
 	};
 
 };
