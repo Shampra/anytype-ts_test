@@ -1,7 +1,7 @@
 import { I, C, M } from 'Lib';
 
 class UtilLayout {
-	create (rootId: string, targetId: string, position: I.BlockPosition, columns: number) {
+	create (rootId: string, targetId: string, position: I.BlockPosition, columns: number, replace: boolean) {
 		const layoutRow = new M.Block({
 			type: I.BlockType.Layout,
 			content: {
@@ -12,6 +12,10 @@ class UtilLayout {
 		C.BlockCreate(rootId, targetId, position, layoutRow, (message: any) => {
 			if (message.error.code) {
 				return;
+			}
+
+			if (replace) {
+				C.BlockListDelete(rootId, [targetId]);
 			}
 
 			const rowId = message.blockId;
