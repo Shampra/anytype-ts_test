@@ -71,10 +71,10 @@ class UtilMenu {
 	};
 
 	/**
-	 * Returns the list of layout block types.
-	 * @returns {any[]} The list of layout block types.
+	 * Returns the list of columns block types.
+	 * @returns {any[]} The list of columns block types.
 	 */
-	getBlockLayout () {
+	getBlockColumns () {
 		return [
 			{ id: '2', name: 'Create 2 columns' },
 			{ id: '3', name: 'Create 3 columns' },
@@ -82,7 +82,7 @@ class UtilMenu {
 		].map((it: any) => {
 			it.type = I.BlockType.Layout;
 			it.icon = 'layout';
-			it.aliases = [ 'columns', 'layout' ];
+			it.aliases = [ 'columns' ];
 			return this.mapperBlock(it);
 		});
 	};
