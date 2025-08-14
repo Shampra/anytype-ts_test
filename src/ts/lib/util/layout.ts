@@ -1,7 +1,7 @@
 import { I, C, M } from 'Lib';
 
 class UtilLayout {
-	create (rootId: string, targetId: string, position: I.BlockPosition, columns: number, replace: boolean) {
+	create (rootId: string, targetId: string, columns: number, callBack: (rowId: string) => void) {
 		const layoutRow = new M.Block({
 			type: I.BlockType.Layout,
 			content: {
@@ -9,16 +9,13 @@ class UtilLayout {
 			},
 		});
 
-		C.BlockCreate(rootId, targetId, position, layoutRow, (message: any) => {
+		C.BlockCreate(rootId, targetId, I.BlockPosition.Bottom, layoutRow, (message: any) => {
 			if (message.error.code) {
 				return;
 			}
-
-			if (replace) {
-				C.BlockListDelete(rootId, [targetId]);
-			}
-
 			const rowId = message.blockId;
+
+			let createdColumns = 0;
 			for (let i = 0; i < columns; i++) {
 				const layoutColumn = new M.Block({
 					type: I.BlockType.Layout,
@@ -31,7 +28,6 @@ class UtilLayout {
 					if (colMessage.error.code) {
 						return;
 					}
-
 					const columnId = colMessage.blockId;
 					const textBlock = new M.Block({
 						type: I.BlockType.Text,
@@ -40,7 +36,12 @@ class UtilLayout {
 							text: '',
 						},
 					});
-					C.BlockCreate(rootId, columnId, I.BlockPosition.Bottom, textBlock);
+					C.BlockCreate(rootId, columnId, I.BlockPosition.Bottom, textBlock, () => {
+						createdColumns++;
+						if (createdColumns === columns) {
+							callBack(rowId);
+						}
+					});
 				});
 			}
 		});

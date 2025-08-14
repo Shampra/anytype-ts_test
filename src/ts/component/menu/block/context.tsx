@@ -254,9 +254,14 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 						if (item.type == I.BlockType.Layout) {
 							const columns = parseInt(item.itemId, 10);
 							const block = S.Block.getLeaf(rootId, blockId);
-							const position = block.getLength() ? I.BlockPosition.Bottom : I.BlockPosition.Replace;
 
-							U.Layout.create(rootId, blockId, position, columns, position == I.BlockPosition.Replace);
+							if (block.getLength() === 0) {
+								U.Layout.create(rootId, blockId, columns, () => {
+									C.BlockListDelete(rootId, [blockId]);
+								});
+							} else {
+								U.Layout.create(rootId, blockId, columns, () => {});
+							}
 						};
 						
 						close();
