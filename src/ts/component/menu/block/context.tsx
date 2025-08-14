@@ -250,6 +250,15 @@ const MenuBlockContext = observer(class MenuBlockContext extends React.Component
 						if (item.type == I.BlockType.Page) {
 							C.BlockListConvertToObjects(rootId, blockIds, '', '', U.Data.getLinkBlockParam('', I.ObjectLayout.Page, false));
 						};
+
+						if (item.type == I.BlockType.Layout) {
+							const columns = parseInt(item.itemId, 10);
+							const block = S.Block.getLeaf(rootId, blockId);
+							const parent = S.Block.getParentLeaf(rootId, blockId);
+							const position = (parent && parent.childrenIds.indexOf(blockId) == parent.childrenIds.length - 1) ? I.BlockPosition.Bottom : I.BlockPosition.After;
+
+							U.Layout.create(rootId, blockId, position, columns);
+						};
 						
 						close();
 					},

@@ -71,6 +71,23 @@ class UtilMenu {
 	};
 
 	/**
+	 * Returns the list of layout block types.
+	 * @returns {any[]} The list of layout block types.
+	 */
+	getBlockLayout () {
+		return [
+			{ id: '2', name: 'Create 2 columns' },
+			{ id: '3', name: 'Create 3 columns' },
+			{ id: '4', name: 'Create 4 columns' },
+		].map((it: any) => {
+			it.type = I.BlockType.Layout;
+			it.icon = 'layout';
+			it.aliases = [ 'columns', 'layout' ];
+			return this.mapperBlock(it);
+		});
+	};
+
+	/**
 	 * Returns the list of media block types.
 	 * @returns {any[]} The list of media block types.
 	 */

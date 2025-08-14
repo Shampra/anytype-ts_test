@@ -293,6 +293,7 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 		let sections: any[] = [
 			{ id: 'text', name: translate('menuBlockAddSectionsText'), children: U.Menu.getBlockText() },
 			{ id: 'list', name: translate('menuBlockAddSectionsList'), children: U.Menu.getBlockList() },
+			{ id: 'layout', name: translate('menuBlockStyleTurnLayout'), children: U.Menu.getBlockLayout() },
 			{ id: 'media', name: translate('menuBlockAddSectionsMedia'), children: U.Menu.getBlockMedia() },
 			{ id: 'embed', name: translate('menuBlockAddSectionsEmbed'), children: U.Menu.getBlockEmbed() },
 			{ id: 'other', name: translate('menuBlockAddSectionsOther'), children: U.Menu.getBlockOther() },

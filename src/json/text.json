@@ -1633,6 +1633,7 @@
 
 	"menuBlockStyleTurnText": "Turn into text",
 	"menuBlockStyleTurnList": "Turn into list",
+	"menuBlockStyleTurnLayout": "Turn into layout",
 	"menuBlockStyleTurnDiv": "Turn into divider",
 	"menuBlockStyleTurnFile": "Turn into file",
 

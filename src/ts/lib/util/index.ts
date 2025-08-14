@@ -4,6 +4,7 @@ import Date from './date';
 import Embed from './embed';
 import File from './file';
 import Graph from './graph';
+import Layout from './layout';
 import Menu from './menu';
 import Object from './object';
 import Router from './router';
@@ -19,6 +20,7 @@ export {
 	Embed,
 	File,
 	Graph,
+	Layout,
 	Menu,
 	Object,
 	Router,
