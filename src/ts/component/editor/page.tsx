@@ -2592,8 +2592,8 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 
 	applyCss () {
 		const { rootId } = this.props;
-		const object = S.Detail.get(rootId, rootId, [], true);
-		const relations = Relation.getRelations(object);
+		const object = S.Detail.get(rootId, rootId, [ 'type' ], true);
+		const relations = S.Record.getObjectRelations(rootId, object.type);
 		const cssRelation = relations.find(r => r.format === I.RelationType.Css);
 
 		let styleTag = document.getElementById('custom-css');
