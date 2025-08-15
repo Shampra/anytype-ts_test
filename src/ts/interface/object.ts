@@ -45,6 +45,7 @@ export enum RelationType {
 	Phone		 = 9,
 	Icon		 = 10,
 	MultiSelect	 = 11,
+	Css			 = 12,
 	Object		 = 100,
 	Relations	 = 101,
 };

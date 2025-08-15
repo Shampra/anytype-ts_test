@@ -436,6 +436,7 @@ class UtilMenu {
 			{ id: I.RelationType.Number },
 			{ id: I.RelationType.Select },
 			{ id: I.RelationType.MultiSelect },
+			{ id: I.RelationType.Css },
 			{ id: I.RelationType.Date },
 			{ id: I.RelationType.File },
 			{ id: I.RelationType.Checkbox },

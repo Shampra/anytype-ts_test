@@ -14,6 +14,7 @@ import { sidebar } from './sidebar';
 import Storage from './storage';
 import Mark from './mark';
 import Relation from './relation';
+import Css from './util/css';
 import Dataview from './dataview';
 import { focus } from './focus';
 import { scrollOnMove } from './scrollOnMove';

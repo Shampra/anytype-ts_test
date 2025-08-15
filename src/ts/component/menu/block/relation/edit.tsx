@@ -3,12 +3,13 @@ import $ from 'jquery';
 import { observable } from 'mobx';
 import { observer } from 'mobx-react';
 import { I, C, S, U, J, analytics, Preview, translate, keyboard, Relation, Action } from 'Lib';
-import { Input, MenuItemVertical, Button, Icon } from 'Component';
+import { Input, MenuItemVertical, Button, Icon, Textarea } from 'Component';
 
 const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React.Component<I.Menu> {
 
 	node: any = null;
 	format: I.RelationType = null;
+	cssContent: string = '';
 	objectTypes: string[] = [];
 	includeTime: boolean = false;
 	ref = null;
@@ -23,6 +24,7 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 		this.onCopy = this.onCopy.bind(this);
 		this.onUnlink = this.onUnlink.bind(this);
 		this.onChange = this.onChange.bind(this);
+		this.onChangeCss = this.onChangeCss.bind(this);
 		this.onRemove = this.onRemove.bind(this);
 		this.menuClose = this.menuClose.bind(this);
 		this.rebind = this.rebind.bind(this);
@@ -41,6 +43,7 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 		const isName = relation && (relation.relationKey == 'name');
 		const isDescription = relation && (relation.relationKey == 'description');
 		const isDate = Relation.isDate(this.format);
+		const isCss = this.format == I.RelationType.Css;
 
 		let canDuplicate = true;
 		let canDelete = !noDelete;
@@ -109,6 +112,20 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 				</div>
 			);
 		};
+
+		if (isCss) {
+			opts = (
+				<div className="section">
+					<div className="name">{translate('CSS')}</div>
+					<Textarea
+						ref={ref => this.ref = ref}
+						value={this.cssContent}
+						onChange={this.onChangeCss}
+						onMouseEnter={this.menuClose}
+					/>
+				</div>
+			)
+		}
 
 		if (isDate && relation) {
 			opts = (
@@ -199,6 +216,9 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 			this.format = relation.format;
 			this.objectTypes = Relation.getArrayValue(relation.objectTypes);
 			this.includeTime = relation.includeTime;
+			if (this.format === I.RelationType.Css) {
+				this.cssContent = relation.relationDefaultValue || '';
+			}
 			this.forceUpdate();
 		};
 
@@ -343,6 +363,11 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 		this.checkButton();
 	};
 
+	onChangeCss (e: any) {
+		this.cssContent = e.target.value;
+		this.forceUpdate();
+	}
+
 	onChangeTime (v: boolean) {
 		const relation = this.getRelation();
 
@@ -447,11 +472,15 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 	save () {
 		const name = this.ref ? this.ref.getValue() : '';
 		const relation = this.getRelation();
-		const item: any = { 
+		const item: any = {
 			relationFormat: this.format,
 			relationFormatObjectTypes: (this.format == I.RelationType.Object) ? this.objectTypes || [] : [],
 			relationFormatIncludeTime: this.includeTime,
 		};
+
+		if (this.format === I.RelationType.Css) {
+			item.relationDefaultValue = U.Css.sanitize(this.cssContent);
+		}
 
 		if (name) {
 			item.name = name;

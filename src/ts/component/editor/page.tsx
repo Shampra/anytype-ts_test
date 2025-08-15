@@ -70,6 +70,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		this.blockCreate = this.blockCreate.bind(this);
 		this.getWrapperWidth = this.getWrapperWidth.bind(this);
 		this.resizePage = this.resizePage.bind(this);
+		this.applyCss = this.applyCss.bind(this);
 		this.focusInit = this.focusInit.bind(this);
 		this.blockRemove = this.blockRemove.bind(this);
 		this.setLayoutWidth = this.setLayoutWidth.bind(this);
@@ -155,6 +156,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		this.rebind();
 		this.open();
 		this.initNodes();
+		this.applyCss();
 	};
 
 	componentDidUpdate () {
@@ -166,6 +168,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		this.checkDeleted();
 		this.initNodes();
 		this.rebind();
+		this.applyCss();
 
 		focus.apply();
 		S.Block.updateNumbers(rootId);
@@ -2587,6 +2590,26 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		this.setState({ isLoading: v });
 	};
 
+	applyCss () {
+		const { rootId } = this.props;
+		const object = S.Detail.get(rootId, rootId, [], true);
+		const relations = Relation.getRelations(object);
+		const cssRelation = relations.find(r => r.format === I.RelationType.Css);
+
+		let styleTag = document.getElementById('custom-css');
+		if (!styleTag) {
+			styleTag = document.createElement('style');
+			styleTag.id = 'custom-css';
+			document.head.appendChild(styleTag);
+		}
+
+		if (cssRelation && cssRelation.relationDefaultValue) {
+			const sanitizedCss = U.Css.sanitize(cssRelation.relationDefaultValue);
+			styleTag.innerHTML = `#editorWrapper { ${sanitizedCss} }`;
+		} else {
+			styleTag.innerHTML = '';
+		}
+	}
 });
 
 export default EditorPage;

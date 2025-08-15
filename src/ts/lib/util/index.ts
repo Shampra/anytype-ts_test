@@ -11,9 +11,11 @@ import Smile from './smile';
 import Space from './space';
 import Prism from './prism';
 import Subscription from './subscription';
+import Css from './css';
 
 export {
 	Common,
+	Css,
 	Data,
 	Date,
 	Embed,

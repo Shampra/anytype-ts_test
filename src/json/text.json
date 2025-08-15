@@ -222,6 +222,7 @@
 	"commonNotSynced": "Not synced",
 	"commonNewVersion": "Version <span class='hl'>%s</span> is out now",
 	"commonUpgrade": "✦ Upgrade",
+	"CSS": "CSS",
 
 	"pluralDay": "day|days",
 	"pluralObject": "Object|Objects",
@@ -368,6 +369,7 @@
 	"relationName9": "Phone",
 	"relationName10": "Icon",
 	"relationName11": "Multi-select",
+	"relationName12": "CSS",
 	"relationName100": "Object",
 	"relationName101": "Properties",
 	"relationCheckboxLabel0": "%s is unchecked",
