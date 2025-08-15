@@ -121,7 +121,6 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 						ref={ref => this.ref = ref}
 						value={this.cssContent}
 						onChange={this.onChangeCss}
-						onMouseEnter={this.menuClose}
 					/>
 				</div>
 			)

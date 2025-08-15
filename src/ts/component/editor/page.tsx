@@ -4,7 +4,7 @@ import raf from 'raf';
 import { observer } from 'mobx-react';
 import { throttle } from 'lodash';
 import { Icon, Loader, Deleted, DropTarget, EditorControls } from 'Component';
-import { I, C, S, U, J, Key, Preview, Mark, focus, keyboard, Storage, Action, translate, analytics, Renderer, sidebar } from 'Lib';
+import { I, C, S, U, J, Key, Preview, Mark, focus, keyboard, Storage, Action, translate, analytics, Renderer, sidebar, Relation } from 'Lib';
 import PageHeadEditor from 'Component/page/elements/head/editor';
 import Children from 'Component/page/elements/children';
 import TableOfContents from 'Component/page/elements/tableOfContents';
