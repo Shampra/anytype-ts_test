@@ -520,13 +520,13 @@ class Action {
 	 * @param {string} route - The route context for analytics.
 	 * @param {function} [callBack] - Optional callback after archiving.
 	 */
-	archive (ids: string[], route: string, callBack?: () => void) {
+	archive (ids: string[], route: string, callBack?: () => void, originId?: string) {
 		C.ObjectListSetIsArchived(ids, true, (message: any) => {
 			if (message.error.code) {
 				return;
 			};
 
-			Preview.toastShow({ action: I.ToastAction.Archive, ids });
+			Preview.toastShow({ action: I.ToastAction.Archive, ids, originId });
 			analytics.event('MoveToBin', { route, count: ids.length });
 
 			if (callBack) {
@@ -541,12 +541,16 @@ class Action {
 	 * @param {string} route - The route context for analytics.
 	 * @param {function} [callBack] - Optional callback after restore.
 	 */
-	restore (ids: string[], route: string, callBack?: () => void) {
+	restore (ids: string[], route: string, callBack?: () => void, originId?: string) {
 		ids = ids || [];
 
 		C.ObjectListSetIsArchived(ids, false, (message: any) => {
 			if (message.error.code) {
 				return;
+			};
+
+			if (originId) {
+				this.addToCollection(originId, ids);
 			};
 
 			analytics.event('RestoreFromBin', { route, count: ids.length });

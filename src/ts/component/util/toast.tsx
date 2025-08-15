@@ -131,7 +131,7 @@ const Toast: FC = observer(() => {
 
 			case 'undoArchive': {
 				if (item.data) {
-					Action.restore(item.data, analytics.route.toast);
+					Action.restore(item.data, analytics.route.toast, null, S.Common.toast.originId);
 				};
 				break;
 			};
