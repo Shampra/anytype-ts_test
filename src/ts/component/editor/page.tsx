@@ -2603,9 +2603,15 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			document.head.appendChild(styleTag);
 		}
 
-		if (cssRelation && cssRelation.relationDefaultValue) {
-			const sanitizedCss = U.Css.sanitize(cssRelation.relationDefaultValue);
-			styleTag.innerHTML = `#editorWrapper { ${sanitizedCss} }`;
+		if (cssRelation) {
+			const objectWithCss = S.Detail.get(rootId, rootId, [cssRelation.relationKey]);
+			const cssValue = objectWithCss[cssRelation.relationKey];
+			if (cssValue) {
+				const sanitizedCss = U.Css.sanitize(cssValue);
+				styleTag.innerHTML = `#editorWrapper { ${sanitizedCss} }`;
+			} else {
+				styleTag.innerHTML = '';
+			}
 		} else {
 			styleTag.innerHTML = '';
 		}

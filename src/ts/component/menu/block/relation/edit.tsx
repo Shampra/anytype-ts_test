@@ -113,7 +113,7 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 			);
 		};
 
-		if (isCss) {
+		if (isCss && !isType) {
 			opts = (
 				<div className="section">
 					<div className="name">{translate('CSS')}</div>
@@ -477,7 +477,7 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 			relationFormatIncludeTime: this.includeTime,
 		};
 
-		if (this.format === I.RelationType.Css) {
+		if (this.format === I.RelationType.Css && !isType) {
 			item.relationDefaultValue = U.Css.sanitize(this.cssContent);
 		}
 
