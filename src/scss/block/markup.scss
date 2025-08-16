@@ -63,3 +63,8 @@ markuplatex { user-select: all !important; }
 markupbold, markupitalic, markupstrike, markupunderline, markuphighlight, markupsearch {
 	user-select: text !important;
 }
+
+markupproperty {
+	color: #4444ff;
+	font-style: italic;
+}
