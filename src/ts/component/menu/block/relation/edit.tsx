@@ -471,6 +471,9 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 	save () {
 		const name = this.ref ? this.ref.getValue() : '';
 		const relation = this.getRelation();
+		const { rootId } = this.props.param.data;
+		const object = S.Detail.get(rootId, rootId);
+		const isType = U.Object.isTypeLayout(object.layout);
 		const item: any = {
 			relationFormat: this.format,
 			relationFormatObjectTypes: (this.format == I.RelationType.Object) ? this.objectTypes || [] : [],
