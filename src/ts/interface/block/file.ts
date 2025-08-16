@@ -13,6 +13,9 @@ export enum FileType {
 	Video	 = 3,
 	Audio	 = 4,
 	Pdf = 5,
+	Text = 6,
+	Csv = 7,
+	Ps1 = 8,
 };
 
 export enum FileState {

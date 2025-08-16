@@ -1,3 +1,7 @@
+@import "../../block/media/text";
+@import "../../block/media/csv";
+@import "../../block/media/ps1";
+
 .block.blockCover {
     .loaderWrapper { background: var(--color-shape-highlight-light); }
 

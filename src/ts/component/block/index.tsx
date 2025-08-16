@@ -24,7 +24,8 @@ import BlockFile from './media/file';
 import BlockImage from './media/image';
 import BlockVideo from './media/video';
 import BlockAudio from './media/audio';
-import BlockPdf from './media/pdf'; 
+import BlockPdf from './media/pdf';
+import BlockEmbeddable from './media/embeddable';
 
 import BlockEmbed from './embed';
 
@@ -215,6 +216,13 @@ const Block = observer(class Block extends React.Component<Props> {
 
 					case I.FileType.Pdf: {
 						blockComponent = <BlockPdf key={key} ref={setRef} {...this.props} />;
+						break;
+					};
+
+					case I.FileType.Text:
+					case I.FileType.Csv:
+					case I.FileType.Ps1: {
+						blockComponent = <BlockEmbeddable key={key} ref={setRef} {...this.props} />;
 						break;
 					};
 				};
