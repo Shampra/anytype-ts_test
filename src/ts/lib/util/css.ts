@@ -1,19 +1,35 @@
 class UtilCss {
-  sanitize(css: string): string {
+  sanitize(css: string): { sanitizedCss: string, message: string | null } {
     if (!css) {
-      return '';
+      return { sanitizedCss: '', message: null };
     }
 
-    // A basic sanitizer that removes potentially dangerous CSS properties.
-    // This is not exhaustive and should be improved for production use.
-    const sanitizedCss = css
-      .replace(/behavior|expression|@import|@charset/gi, '')
-      .replace(/url\s*\((?!['"]?(data:|https):)/gi, ''); // Allow data URIs and https
+    let originalCss = css;
+    let message: string | null = null;
 
-    // TODO: Add more robust CSS sanitization logic here.
-    // For example, use a library like DOMPurify or sanitize-css.
+    // More robust sanitization
+    let sanitizedCss = css
+      // Disallow dangerous properties
+      .replace(/behavior\s*:/gi, '')
+      .replace(/expression\s*\(/gi, '')
+      .replace(/javascript\s*:/gi, '')
+      .replace(/vbscript\s*:/gi, '')
+      .replace(/url\s*\((?!['"]?(data:|https|http|\/))/gi, 'url(invalid:')
+      // Disallow @import and @charset
+      .replace(/@import/gi, '')
+      .replace(/@charset/gi, '');
 
-    return sanitizedCss;
+    // Remove any rules with `position: fixed` or `position: sticky`
+    sanitizedCss = sanitizedCss.replace(/position\s*:\s*(fixed|sticky)\s*;/gi, '');
+
+    // Remove any rules with `z-index`
+    sanitizedCss = sanitizedCss.replace(/z-index\s*:\s*\d+\s*;/gi, '');
+
+    if (originalCss !== sanitizedCss) {
+      message = 'Potentially harmful CSS has been removed.';
+    }
+
+    return { sanitizedCss, message };
   }
 }
 

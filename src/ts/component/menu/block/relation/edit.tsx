@@ -481,7 +481,11 @@ const MenuBlockRelationEdit = observer(class MenuBlockRelationEdit extends React
 		};
 
 		if (this.format === I.RelationType.Css && !isType) {
-			item.relationDefaultValue = U.Css.sanitize(this.cssContent);
+			const { sanitizedCss, message } = U.Css.sanitize(this.cssContent);
+			item.relationDefaultValue = sanitizedCss;
+			if (message) {
+				Preview.toastShow({ text: message });
+			}
 		}
 
 		if (name) {

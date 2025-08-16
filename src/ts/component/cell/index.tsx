@@ -292,6 +292,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 				break;
 			};
 
+			case I.RelationType.Css:
 			case I.RelationType.LongText: {
 				if (!noInplace) {
 					const wh = win.height();
@@ -549,6 +550,7 @@ const Cell = observer(forwardRef<I.CellRef, Props>((props, ref) => {
 		case I.RelationType.ShortText:
 		case I.RelationType.Number:
 		case I.RelationType.LongText:
+		case I.RelationType.Css:
 		case I.RelationType.Date:
 			CellComponent = CellText;
 			break;

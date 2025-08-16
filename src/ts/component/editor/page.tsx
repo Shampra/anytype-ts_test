@@ -2607,7 +2607,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 			const objectWithCss = S.Detail.get(rootId, rootId, [cssRelation.relationKey]);
 			const cssValue = objectWithCss[cssRelation.relationKey];
 			if (cssValue) {
-				const sanitizedCss = U.Css.sanitize(cssValue);
+				const { sanitizedCss } = U.Css.sanitize(cssValue);
 				styleTag.innerHTML = `#editorWrapper { ${sanitizedCss} }`;
 			} else {
 				styleTag.innerHTML = '';

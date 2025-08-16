@@ -100,7 +100,15 @@ const SidebarSectionObjectRelation = observer(class SidebarSectionObjectRelation
 		const { rootId } = this.props;
 		const object = S.Detail.get(rootId, rootId);
 		const relation = S.Record.getRelationByKey(relationKey);
-		const val = Relation.formatValue(relation, value, true);
+		let val = Relation.formatValue(relation, value, true);
+
+		if (relation.format === I.RelationType.Css) {
+			const { sanitizedCss, message } = U.Css.sanitize(val);
+			val = sanitizedCss;
+			if (message) {
+				Preview.toastShow({ text: message });
+			}
+		}
 
 		C.ObjectListSetDetails([ object.id ], [ { key: relationKey, value: val } ], callBack);
 
