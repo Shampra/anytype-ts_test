@@ -81,6 +81,7 @@ const PageMainSet = observer(class PageMainSet extends React.Component<I.PageCom
 								rootId={rootId}
 								iconSize={20}
 								block={block}
+								tempFilter={this.props.match.params.tempFilter}
 								className="noPlus"
 								isSelectionDisabled={true}
 								readonly={readonly}

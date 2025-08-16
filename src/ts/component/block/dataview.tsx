@@ -20,6 +20,7 @@ import ViewTimeline from './dataview/view/timeline';
 
 interface Props extends I.BlockComponent {
 	isInline?: boolean;
+	tempFilter?: any;
 };
 
 const BlockDataview = observer(class BlockDataview extends React.Component<Props> {
@@ -422,10 +423,15 @@ const BlockDataview = observer(class BlockDataview extends React.Component<Props
 				this.viewId = '';
 			};
 		} else {
+			const { tempFilter } = this.props;
 			const filters = [];
 
 			if (this.searchIds) {
 				filters.push({ relationKey: 'id', condition: I.FilterCondition.In, value: this.searchIds || [] });
+			};
+
+			if (tempFilter) {
+				filters.push(tempFilter);
 			};
 
 			Dataview.getData({

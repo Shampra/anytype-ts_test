@@ -8,6 +8,7 @@ import { C, I, S, U, J, translate, Storage, Action, analytics, Dataview, keyboar
 import WidgetSpace from './space';
 import WidgetView from './view';
 import WidgetTree from './tree';
+import WidgetProperty from './property';
 
 interface Props extends I.WidgetComponent {
 	name?: string;
@@ -786,6 +787,12 @@ const WidgetIndex = observer(forwardRef<{}, Props>((props, ref) => {
 		case I.WidgetLayout.View: {
 			cn.push('widgetView');
 			content = <WidgetView {...childProps} />;
+			break;
+		};
+
+		case I.WidgetLayout.Property: {
+			cn.push('widgetProperty');
+			content = <WidgetProperty {...childProps} />;
 			break;
 		};
 

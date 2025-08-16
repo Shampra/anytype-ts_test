@@ -2,7 +2,7 @@ import * as React from 'react';
 import raf from 'raf';
 import { observer } from 'mobx-react';
 import { Button, Icon, Widget, DropTarget, ShareBanner, ProgressText, Label } from 'Component';
-import { I, C, M, S, U, J, keyboard, analytics, translate, scrollOnMove } from 'Lib';
+import { I, C, M, S, U, J, keyboard, analytics, translate, scrollOnMove, Relation } from 'Lib';
 
 type State = {
 	isEditing: boolean;
@@ -307,34 +307,53 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 		const onSelect = (target: any, isNew: boolean) => {
 			if (!target) {
 				return;
-			};
+			}
 
-			const limitOptions = U.Menu.getWidgetLimitOptions(I.WidgetLayout.Link);
-			const layoutOptions = U.Menu.getWidgetLayoutOptions(target.id, target.layout);
-			const layout = layoutOptions.length ? layoutOptions[0].id : I.WidgetLayout.Link;
-			const newBlock = { 
-				type: I.BlockType.Link,
-				content: { 
-					targetBlockId: target.id, 
-				},
-			};
-
-			C.BlockCreateWidget(S.Block.widgets, '', newBlock, I.BlockPosition.Top, layout, Number(limitOptions[0].id), (message: any) => {
-				if (message.error.code) {
-					return;
+			if (target.relationKey) { // It's a property/relation
+				const limitOptions = U.Menu.getWidgetLimitOptions(I.WidgetLayout.Property);
+				const newBlock = {
+					type: I.BlockType.Link, // This seems to be standard for widgets
+					content: {
+						targetBlockId: target.id, // Keep this for the name/icon
+						relationKey: target.relationKey,
+					},
 				};
 
-				if (isNew) {
-					U.Object.openConfig(target);
-				};
-
-				analytics.createWidget(I.WidgetLayout.Link, route, analytics.widgetType.manual);
-				analytics.event('ChangeWidgetSource', {
-					layout,
-					route: analytics.route.addWidget,
-					params: { target },
+				C.BlockCreateWidget(S.Block.widgets, '', newBlock, I.BlockPosition.Top, I.WidgetLayout.Property, Number(limitOptions[0].id), (message: any) => {
+					if (message.error.code) {
+						return;
+					}
+					analytics.createWidget(I.WidgetLayout.Property, route, analytics.widgetType.manual);
 				});
-			});					
+
+			} else { // It's an object or type (existing logic)
+				const limitOptions = U.Menu.getWidgetLimitOptions(I.WidgetLayout.Link);
+				const layoutOptions = U.Menu.getWidgetLayoutOptions(target.id, target.layout);
+				const layout = layoutOptions.length ? layoutOptions[0].id : I.WidgetLayout.Link;
+				const newBlock = {
+					type: I.BlockType.Link,
+					content: {
+						targetBlockId: target.id,
+					},
+				};
+
+				C.BlockCreateWidget(S.Block.widgets, '', newBlock, I.BlockPosition.Top, layout, Number(limitOptions[0].id), (message: any) => {
+					if (message.error.code) {
+						return;
+					}
+
+					if (isNew) {
+						U.Object.openConfig(target);
+					}
+
+					analytics.createWidget(I.WidgetLayout.Link, route, analytics.widgetType.manual);
+					analytics.event('ChangeWidgetSource', {
+						layout,
+						route: analytics.route.addWidget,
+						params: { target },
+					});
+				});
+			}
 		};
 
 		let menuContext = null;
@@ -420,6 +439,18 @@ const SidebarPageWidget = observer(class SidebarPageWidget extends React.Compone
 
 						lists.push([ { name: translate('commonSystem'), isSection: true } ].concat(system));
 					};
+
+					const relations = S.Record.getRelations()
+						.filter(it =>
+							!it.isHidden &&
+							[I.RelationType.Select, I.RelationType.MultiSelect].includes(it.format) &&
+							it.name.match(reg)
+						)
+						.map(it => ({ ...it, icon: 'relation ' + Relation.className(it.format) }));
+
+					if (relations.length) {
+						lists.push([ { name: translate('commonProperties'), isSection: true } ].concat(relations));
+					}
 
 					if (types.length) {
 						lists.push([ { name: translate('commonSuggested'), isSection: true } ].concat(types));

@@ -6,6 +6,7 @@ interface Props {
 	text?: string;
 	className?: string;
 	color?: string;
+	isFilled?: boolean;
 	canEdit?: boolean;
 	onClick?: (e: any) => void;
 	onRemove?: (e: any) => void;
@@ -17,6 +18,7 @@ const Tag: FC<Props> = ({
 	text = '',
 	className = '',
 	color = '',
+	isFilled = false,
 	canEdit = false,
 	onClick,
 	onRemove,
@@ -31,6 +33,10 @@ const Tag: FC<Props> = ({
 	};
 	if (canEdit) {
 		cn.push('canEdit');
+	};
+	if (isFilled) {
+		cn.push('isFilled');
+		cn.push('isMultiSelect');
 	};
 
 	const onRemoveHandler = (e: MouseEvent) => {
