@@ -8,6 +8,7 @@ import { I, C, S, U, J, keyboard, Preview, Mark, focus, Storage, translate, anal
 
 interface Props extends I.BlockComponent {
 	onToggle?(e: any): void;
+	renderProperty?(rootId: string, node: any, marks: I.Mark[], getValue: () => string, props: any, param?: any): void;
 };
 
 for (const lang of U.Prism.components) {
@@ -309,6 +310,7 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 				renderObjects(rootId, this.node, this.marks, () => this.getValue(), this.props);
 				renderLinks(rootId, this.node, this.marks, () => this.getValue(), this.props);
 				renderEmoji(this.node);
+				this.props.renderProperty(rootId, this.node, this.marks, () => this.getValue(), this.props);
 			});
 		};
 
@@ -684,8 +686,10 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 			U.Data.setRtl(rootId, block.id);
 		};
 
+		const isInline = range && (range.from > 1) && (value[range.from - 2] != '\n');
+
 		if (range) {
-			isAllowedMenu = isAllowedMenu && (!range.from || (range.from == 1) || [ ' ', '\n', '(', '[', '"', '\'' ].includes(twoSymbolBefore));
+			isAllowedMenu = isAllowedMenu && (isInline || !range.from || (range.from == 1) || [ ' ', '\n', '(', '[', '"', '\'' ].includes(twoSymbolBefore));
 		};
 
 		const canOpenMenuAdd = !menuOpenAdd && (oneSymbolBefore == '/') && isAllowedMenu;
@@ -721,9 +725,9 @@ const BlockText = observer(class BlockText extends React.Component<Props> {
 		};
 
 		// Open add menu
-		if (canOpenMenuAdd && (!isInsideTable && !block.isTextCode())) { 
+		if (canOpenMenuAdd && (!isInsideTable && !block.isTextCode())) {
 			U.Data.blockSetText(rootId, block.id, value, this.marks, true, () => {
-				onMenuAdd(id, U.Common.stringCut(value, range.from - 1, range.from), range, this.marks);
+				onMenuAdd(id, U.Common.stringCut(value, range.from - 1, range.from), range, this.marks, { isInline });
 			});
 			return;
 		};
