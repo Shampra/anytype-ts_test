@@ -1831,7 +1831,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 		});
 	};
 	
-	onMenuAdd (blockId: string, text: string, range: I.TextRange, marks: I.Mark[]) {
+	onMenuAdd (blockId: string, text: string, range: I.TextRange, marks: I.Mark[], param?: any) {
 		const { rootId } = this.props;
 		const block = S.Block.getLeaf(rootId, blockId);
 		const win = $(window);
@@ -1842,7 +1842,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 
 		S.Common.filterSet(range.from, '');
 
-		S.Menu.open('blockAdd', { 
+		S.Menu.open('blockAdd', {
 			element: $(`#block-${blockId}`),
 			classNameWrap: 'fromBlock',
 			subIds: J.Menu.add,
@@ -1861,6 +1861,7 @@ const EditorPage = observer(class EditorPage extends React.Component<Props, Stat
 				$(`.placeholder.c${blockId}`).text(translate('placeholderBlock'));
 			},
 			data: {
+				...param,
 				blockId,
 				rootId,
 				text,
