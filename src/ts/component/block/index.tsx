@@ -31,6 +31,7 @@ import BlockEmbed from './embed';
 interface Props extends I.BlockComponent {
 	css?: any;
 	iconSize?: number;
+	tempFilter?: any;
 };
 
 const SNAP = 0.01;

@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useEffect, useRef, useState, MouseEvent } from 'react';
 import { observer } from 'mobx-react';
 import { Label, Icon, IconObject, Tag } from 'Component';
-import { I, S, U, J, Relation, Action, analytics, translate } from 'Lib';
+import { I, C, S, U, J, Relation, Action, analytics, translate } from 'Lib';
 
 interface WidgetPropertyRefProps {
 	updateData: () => void;
@@ -95,7 +95,7 @@ const WidgetProperty = observer(forwardRef<WidgetPropertyRefProps, I.WidgetCompo
 					// Now we need to add a dataview to the set
 					const dataviewBlock = {
 						type: I.BlockType.Dataview,
-						content: U.Data.defaultDataviewSettings(),
+						content: {},
 					};
 					C.BlockCreate(newSet.id, '', I.BlockPosition.Bottom, dataviewBlock, (dvMessage: any) => {
 						if (!dvMessage.error.code) {
