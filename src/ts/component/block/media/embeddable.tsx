@@ -244,9 +244,22 @@ const BlockEmbeddable = observer(forwardRef<I.BlockRef, I.BlockComponent>((props
 			};
 
 			case I.FileState.Done: {
-				if (style === I.FileStyle.Embed) {
+				if (style === I.FileStyle.Embed || style === I.FileStyle.Auto) {
+					const wrapperClass = ['wrap', 'embeddableWrapper'];
+					switch (type) {
+						case I.FileType.Text:
+							wrapperClass.push('isText');
+							break;
+						case I.FileType.Csv:
+							wrapperClass.push('isCsv');
+							break;
+						case I.FileType.Ps1:
+							wrapperClass.push('isPs1');
+							break;
+					}
+
 					element = (
-						<div ref={wrapRef} className={'wrap'} style={css}>
+						<div ref={wrapRef} className={wrapperClass.join(' ')} style={css}>
 							<div className="info" onMouseDown={onOpenObject}>
 								<ObjectName object={object} />
 								<span className="size">{U.File.size(object.sizeInBytes)}</span>

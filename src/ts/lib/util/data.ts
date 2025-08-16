@@ -79,7 +79,13 @@ class UtilData {
 
 		switch (block.type) {
 			case I.BlockType.File: {
-				if ((style == I.FileStyle.Link) || [ I.FileType.File, I.FileType.None ].includes(type)) {
+				if ([I.FileType.Text, I.FileType.Csv, I.FileType.Ps1].includes(type)) {
+					if (style === I.FileStyle.Link) {
+						c.push(dc);
+					} else {
+						c.push(`blockMedia is${I.FileType[type]}`);
+					}
+				} else if ((style == I.FileStyle.Link) || [ I.FileType.File, I.FileType.None ].includes(type)) {
 					c.push(dc);
 				} else {
 					c.push(`blockMedia is${I.FileType[type]}`);
