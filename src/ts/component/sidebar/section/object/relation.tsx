@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { observer } from 'mobx-react';
 import { Cell, Icon } from 'Component';
-import { I, S, U, C, Relation, analytics } from 'Lib';
+import { I, S, U, C, Relation, analytics, Preview } from 'Lib';
 
 const PREFIX = 'sidebarObjectRelation';
 
