@@ -192,9 +192,13 @@ const MenuWidget = observer(class MenuWidget extends React.Component<I.Menu> {
 		};
 
 		if (canRemove) {
-			const children: any[] = [ 
+			const children: any[] = [
 				{ id: 'remove', name: translate('menuWidgetRemoveWidget'), icon: 'removeWidget' },
 			];
+
+			if (targetId === J.Constant.widgetId.bin) {
+				children.unshift({ id: 'empty', name: translate('emptyBin'), icon: 'remove' }, { isDiv: true });
+			}
 
 			if (sections.length) {
 				children.unshift({ isDiv: true });
@@ -305,11 +309,30 @@ const MenuWidget = observer(class MenuWidget extends React.Component<I.Menu> {
 		const { blockId, target } = data;
 
 		switch (item.id) {
+			case 'empty': {
+				const subId = 'empty-bin-subscription';
+				const filters: I.Filter[] = [
+					{ relationKey: 'isArchived', condition: I.FilterCondition.Equal, value: true },
+				];
+				U.Subscription.subscribe({
+					subId,
+					filters,
+					ignoreArchived: false,
+					limit: 0,
+				}, () => {
+					const objectIds = S.Record.getRecords(subId).map(it => it.id);
+					if (objectIds.length > 0) {
+						Action.delete(objectIds, analytics.route.widget);
+					}
+					U.Subscription.destroyList([ subId ]);
+				});
+				break;
+			}
 			case 'remove': {
 				Action.removeWidget(blockId, target);
 				break;
-			};
-		};
+			}
+		}
 
 		close();
 	};
