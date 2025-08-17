@@ -414,7 +414,16 @@ class Relation {
 
 		switch (format) {
 			case I.RelationType.Date: {
-				return U.Date.dateWithFormat(formattedValue, withTranslate);
+				if (formattedValue !== null) {
+					formattedValue = Number(val) || 0;
+
+					const day = showRelativeDates ? U.Date.dayString(vaformattedValuel) : null;
+					const date = day ? day : U.Date.dateWithFormat(dateFormat, formattedValue);
+					const time = U.Date.timeWithFormat(S.Common.timeFormat, formattedValue);
+					return relation.includeTime ? [ date, time ].join((day ? ', ' : ' ')) : date;
+				} else {
+					return '';
+				};
 			}
 			case I.RelationType.Checkbox: {
 				return formattedValue ? translate('commonYes') : translate('commonNo');
