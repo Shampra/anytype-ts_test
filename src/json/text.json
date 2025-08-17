@@ -25,6 +25,7 @@
 	"commonValue": "Value",
 	"commonArchived": "Object is in the bin",
 	"commonEmpty": "Empty",
+	"emptyBin": "Empty bin",
 	"commonBack": "Back",
 	"commonForward": "Forward",
 	"commonNew": "New",
