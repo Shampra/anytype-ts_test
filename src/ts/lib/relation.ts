@@ -414,7 +414,7 @@ class Relation {
 
 		switch (format) {
 			case I.RelationType.Date: {
-				return U.Date.format(formattedValue, withTranslate);
+				return U.Date.dateWithFormat(formattedValue, withTranslate);
 			}
 			case I.RelationType.Checkbox: {
 				return formattedValue ? translate('commonYes') : translate('commonNo');
