@@ -511,10 +511,16 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 		
 		const { param, close } = this.props;
 		const { data } = param;
-		const { rootId, blockId, onSelect, blockCreate } = data;
+		const { rootId, blockId, onSelect, blockCreate, isInline } = data;
 		const block = S.Block.getLeaf(rootId, blockId);
 
 		if (!block) {
+			return;
+		};
+
+		if (isInline && item.isRelation) {
+			this.onInlineProperty(item);
+			close();
 			return;
 		};
 
@@ -734,6 +740,38 @@ const MenuBlockAdd = observer(class MenuBlockAdd extends React.Component<I.Menu>
 		// Hack to prevent onBlur save
 		$(`#block-${blockId} #value`).first().text(text);
 		U.Data.blockSetText(rootId, blockId, text, marks, true, cb);
+	};
+
+	onInlineProperty (item: any) {
+		const { param } = this.props;
+		const { data } = param;
+		const { rootId, blockId, marks, text } = data;
+		const { filter } = S.Common;
+
+		const from = filter.from - 1;
+		const to = filter.from + filter.text.length;
+
+		const newText = U.Common.stringCut(text, from, to);
+		const newMarks = Mark.adjust(marks, from, from - to);
+
+		const object = S.Detail.get(rootId, rootId);
+		const value = object[item.relationKey] || '';
+		const propertyValue = Relation.getPrintableValue(item.format, value, item.relationKey, true);
+
+		const propertyMark: I.Mark = {
+			type: I.MarkType.Property,
+			range: { from: from, to: from + propertyValue.length },
+			param: item.relationKey,
+		};
+
+		const finalText = U.Common.stringInsert(newText, propertyValue, from, from);
+		const finalMarks = Mark.adjust(newMarks, from, propertyValue.length);
+		finalMarks.push(propertyMark);
+
+		U.Data.blockSetText(rootId, blockId, finalText, finalMarks, true, () => {
+			focus.set(blockId, { from: from + propertyValue.length, to: from + propertyValue.length });
+			focus.apply();
+		});
 	};
 
 	moveToPage (typeId: string) {

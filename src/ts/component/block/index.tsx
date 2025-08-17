@@ -69,6 +69,7 @@ const Block = observer(class Block extends React.Component<Props> {
 		this.renderMentions = this.renderMentions.bind(this);
 		this.renderObjects = this.renderObjects.bind(this);
 		this.renderEmoji = this.renderEmoji.bind(this);
+		this.renderProperty = this.renderProperty.bind(this);
 	};
 
 	render () {
@@ -155,6 +156,7 @@ const Block = observer(class Block extends React.Component<Props> {
 						renderMentions={this.renderMentions}
 						renderObjects={this.renderObjects}
 						renderEmoji={this.renderEmoji}
+						renderProperty={this.renderProperty}
 						checkMarkOnBackspace={this.checkMarkOnBackspace}
 					/>
 				);
@@ -536,6 +538,43 @@ const Block = observer(class Block extends React.Component<Props> {
 			horizontal: I.MenuDirection.Right,
 			offsetX: element.outerWidth(),
 			rect: { x: offset.left, y: keyboard.mouse.page.y, width: element.width(), height: 0 },
+		});
+	};
+
+	renderProperty (rootId: string, node: any, marks: I.Mark[], getValue: () => string, props: any, param?: any) {
+		node = $(node);
+		param = param || {};
+
+		const items = node.find(Mark.getTag(I.MarkType.Property));
+		if (!items.length) {
+			return;
+		};
+
+		items.each((i: number, item: any) => {
+			item = $(item);
+			item.off('mouseenter.property').on('mouseenter.property', e => {
+				const sr = U.Common.getSelectionRange();
+				if (sr && !sr.collapsed) {
+					return;
+				};
+
+				const item = $(e.currentTarget);
+				const relationKey = String(item.attr('data-param') || '');
+
+				if (!relationKey) {
+					return;
+				};
+
+				const relation = S.Record.getRelationByKey(relationKey);
+				if (!relation) {
+					return;
+				};
+
+				Preview.tooltipShow({
+					text: relation.name,
+					element: item,
+				});
+			});
 		});
 	};
 

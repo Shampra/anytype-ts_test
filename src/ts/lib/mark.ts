@@ -807,6 +807,9 @@ class Mark {
 		if (t == I.MarkType.Link) {
 			return 'a';
 		};
+		if (t == I.MarkType.Property) {
+			return 'markupproperty';
+		};
 
 		return I.MarkType[t] ? `markup${I.MarkType[t].toLowerCase()}` : '';
 	};

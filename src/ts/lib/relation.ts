@@ -399,6 +399,39 @@ class Relation {
 		return value;
 	};
 
+	public getPrintableValue (format: I.RelationType, value: any, relationKey: string, withTranslate: boolean) {
+		const relation = S.Record.getRelationByKey(relationKey);
+		if (!relation) {
+			return '';
+		};
+
+		const formattedValue = this.formatValue(relation, value, false);
+		const mappedValue = this.mapValue(relation, formattedValue);
+
+		if (mappedValue) {
+			return mappedValue;
+		};
+
+		switch (format) {
+			case I.RelationType.Date: {
+				return U.Date.format(formattedValue, withTranslate);
+			}
+			case I.RelationType.Checkbox: {
+				return formattedValue ? translate('commonYes') : translate('commonNo');
+			}
+			case I.RelationType.File:
+			case I.RelationType.Object:
+			case I.RelationType.MultiSelect:
+			case I.RelationType.Select: {
+				const options = this.getOptions(formattedValue);
+				return options.map(it => it.name).join(', ');
+			}
+			default: {
+				return String(formattedValue || '');
+			}
+		}
+	};
+
 	/**
 	 * Checks if a value is valid for a relation.
 	 * @param {any} relation - The relation object.
