@@ -110,9 +110,15 @@ const CellText = observer(forwardRef<I.CellRef, I.Cell>((props, ref: any) => {
 	const onBlur = (e: any) => {
 		const record = getRecord(recordId);
 
-		if (!inputRef.current || keyboard.isBlurDisabled || !record) {
+		if (keyboard.isBlurDisabled || !record) {
 			return;
 		};
+
+		if (relation.format !== I.RelationType.LongText && relation.format !== I.RelationType.Css) {
+			if (!inputRef.current) {
+				return;
+			}
+		}
 
 		keyboard.setFocus(false);
 		range.current = null;
