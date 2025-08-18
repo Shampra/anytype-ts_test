@@ -10,7 +10,6 @@ const MenuText = observer(class MenuText extends React.Component<I.Menu> {
 	
 	_isMounted = false;
 	node: any = null;
-	save: any;
 
 	constructor (props: I.Menu) {
 		super(props);
