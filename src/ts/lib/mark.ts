@@ -351,7 +351,7 @@ class Mark {
 				data.push(`data-param="${fixedParam}"`);
 			};
 
-			if ([ I.MarkType.Link, I.MarkType.Object, I.MarkType.Mention ].includes(mark.type)) {
+			if ([ I.MarkType.Link, I.MarkType.Object, I.MarkType.Mention, I.MarkType.Property ].includes(mark.type)) {
 				data.push(`data-range="${mark.range.from}-${mark.range.to}"`);
 			};
 

@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import $ from 'jquery';
 import { observer } from 'mobx-react';
-import { I, C, S, U, J, keyboard, focus, Storage, Preview, Mark, translate, Action } from 'Lib';
+import { I, C, S, U, J, keyboard, focus, Storage, Preview, Mark, translate, Action, Relation } from 'Lib';
 import { DropTarget, ListChildren, Icon, SelectionTarget, IconObject, Loader } from 'Component';
 
 import BlockDataview from './dataview';
@@ -550,29 +550,53 @@ const Block = observer(class Block extends React.Component<Props> {
 			return;
 		};
 
+		const object = S.Detail.get(rootId, rootId);
+
 		items.each((i: number, item: any) => {
 			item = $(item);
+			const relationKey = String(item.attr('data-param') || '');
+
+			if (!relationKey) {
+				return;
+			};
+
+			const relation = S.Record.getRelationByKey(relationKey);
+			if (!relation) {
+				return;
+			};
+
+			const value = object[relationKey] || '';
+			const propertyValue = Relation.getPrintableValue(relation.format, value, relationKey, true);
+			const currentPropertyValue = item.text();
+
+			if (currentPropertyValue !== propertyValue) {
+				const { block } = this.props;
+				const rangeAttr = String(item.attr('data-range') || '').split('-');
+				const from = Number(rangeAttr[0]);
+				const to = Number(rangeAttr[1]);
+
+				const newText = getValue().substring(0, from) + propertyValue + getValue().substring(to);
+
+				const lengthDiff = propertyValue.length - (to - from);
+				const newMarks = Mark.adjust(marks, to, lengthDiff);
+				const mark = newMarks.find(m => m.type === I.MarkType.Property && m.param === relationKey && m.range.from === from);
+
+				if (mark) {
+					mark.range.to = from + propertyValue.length;
+				};
+
+				U.Data.blockSetText(rootId, block.id, newText, newMarks.sort(Mark.sort), true);
+			}
+
 			item.off('mouseenter.property').on('mouseenter.property', e => {
 				const sr = U.Common.getSelectionRange();
 				if (sr && !sr.collapsed) {
 					return;
 				};
 
-				const item = $(e.currentTarget);
-				const relationKey = String(item.attr('data-param') || '');
-
-				if (!relationKey) {
-					return;
-				};
-
-				const relation = S.Record.getRelationByKey(relationKey);
-				if (!relation) {
-					return;
-				};
-
 				Preview.tooltipShow({
 					text: relation.name,
-					element: item,
+					element: $(e.currentTarget),
 				});
 			});
 		});
