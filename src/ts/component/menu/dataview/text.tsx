@@ -2,6 +2,7 @@ import * as React from 'react';
 import $ from 'jquery';
 import raf from 'raf';
 import { observer } from 'mobx-react';
+import { throttle } from 'lodash';
 import { Editable } from 'Component';
 import { I, J, U } from 'Lib';
 
@@ -9,10 +10,12 @@ const MenuText = observer(class MenuText extends React.Component<I.Menu> {
 	
 	_isMounted = false;
 	node: any = null;
+	save: any;
 
 	constructor (props: I.Menu) {
 		super(props);
 
+		this.save = throttle(this.save.bind(this), 500);
 		this.onInput = this.onInput.bind(this);
 		this.onBlur = this.onBlur.bind(this);
 	};
@@ -53,16 +56,17 @@ const MenuText = observer(class MenuText extends React.Component<I.Menu> {
 	};
 
 	componentWillUnmount () {
-		this.save();
+		this.save.flush();
 		this._isMounted = false;
 	};
 
 	onInput (e: any) {
 		this.resize();
+		this.save();
 	};
 
 	onBlur (e: any) {
-		this.save();
+		this.save.flush();
 	};
 
 	save () {
