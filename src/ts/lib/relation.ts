@@ -416,9 +416,7 @@ class Relation {
 		switch (format) {
 			case I.RelationType.Date: {
 				if (formattedValue !== null) {
-					formattedValue = Number(val) || 0;
-
-					const day = showRelativeDates ? U.Date.dayString(vaformattedValuel) : null;
+					const day = showRelativeDates ? U.Date.dayString(formattedValue) : null;
 					const date = day ? day : U.Date.dateWithFormat(dateFormat, formattedValue);
 					const time = U.Date.timeWithFormat(S.Common.timeFormat, formattedValue);
 					return relation.includeTime ? [ date, time ].join((day ? ', ' : ' ')) : date;
