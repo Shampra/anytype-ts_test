@@ -401,6 +401,7 @@ class Relation {
 
 	public getPrintableValue (format: I.RelationType, value: any, relationKey: string, withTranslate: boolean) {
 		const relation = S.Record.getRelationByKey(relationKey);
+		const { showRelativeDates, dateFormat } = S.Common;
 		if (!relation) {
 			return '';
 		};
